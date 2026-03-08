@@ -648,6 +648,39 @@
     </div>
   </div>
 
+  <!-- FABRIKA AYARLARI -->
+  <div class="section-label" style="color:var(--danger)">Tehlikeli Bolge</div>
+  <div class="card" style="border-color: rgba(255,69,69,0.2)">
+    <div class="card-header">
+      <h2 style="color:var(--danger)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Fabrika Ayarlarina Don
+      </h2>
+    </div>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
+      Bu islem tum kullanicilari, ayarlari ve kisisel bilgileri siler.<br>
+      Sistem ilk kurulum ekranina donecektir.<br>
+      <strong style="color:var(--danger)">Telemetri ve analitik verileri silinmez.</strong>
+    </p>
+
+    <div class="msg error" id="resetErr"></div>
+    <div class="msg success" id="resetOk"></div>
+
+    <div class="form-row full">
+      <div class="form-group">
+        <label style="color:var(--danger)">Onaylamak icin "FABRIKA AYARLARI" yazin</label>
+        <input type="text" id="resetConfirm" placeholder="FABRIKA AYARLARI" style="border-color:rgba(255,69,69,0.3)">
+      </div>
+    </div>
+    <div style="margin-top: 8px">
+      <button class="btn btn-danger" onclick="doFactoryReset()" id="btnReset">Fabrika Ayarlarina Don</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- Silme Onay Modal -->
@@ -976,6 +1009,52 @@
       showMsg(okEl, 'Site ayarlari kaydedildi');
     } catch (e) {
       showMsg(errEl, 'Sunucu baglantisi hatasi');
+    }
+  }
+
+  /* Fabrika ayarlarina don */
+  async function doFactoryReset() {
+    const confirm_text = $('resetConfirm').value.trim();
+    const errEl = $('resetErr');
+    errEl.classList.remove('show');
+
+    if (confirm_text !== 'FABRIKA AYARLARI') {
+      showMsg(errEl, 'Onay metni yanlis. "FABRIKA AYARLARI" yazin.');
+      return;
+    }
+
+    if (!confirm('DIKKAT! Tum kullanicilar ve ayarlar silinecek.\n\nBu islem geri alinamaz. Devam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    const btn = $('btnReset');
+    btn.disabled = true;
+    btn.textContent = 'Sifirlaniyor...';
+
+    try {
+      const r = await fetch('/api/factory-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm_text })
+      });
+      const d = await r.json();
+
+      if (!r.ok) {
+        showMsg(errEl, d.error || 'Hata olustu');
+        btn.disabled = false;
+        btn.textContent = 'Fabrika Ayarlarina Don';
+        return;
+      }
+
+      /* Basari — kurulum sayfasina yonlendir */
+      showMsg($('resetOk'), 'Fabrika ayarlarina donuldu! Yonlendiriliyorsunuz...');
+      setTimeout(() => {
+        window.location.href = '/setup.html';
+      }, 2000);
+    } catch (e) {
+      showMsg(errEl, 'Sunucu baglantisi hatasi');
+      btn.disabled = false;
+      btn.textContent = 'Fabrika Ayarlarina Don';
     }
   }
 

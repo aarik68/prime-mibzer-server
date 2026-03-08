@@ -184,7 +184,7 @@ db.exec(`
   )
 `);
 
-/* Varsayilan ayarlar */
+/* Varsayilan ayarlar (sadece yoksa ekle) */
 const defaultSettings = {
   site_name: 'PRIME MIBZER',
   site_subtitle: 'Cihaz Yonetim Paneli'
@@ -196,6 +196,22 @@ for (const [k, v] of Object.entries(defaultSettings)) {
   }
 }
 
+/* Kurulum tamamlanmis mi kontrol et */
+const setupFlag = db.prepare("SELECT value FROM settings WHERE key = 'setup_completed'").get();
+const userCount_ = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+
+/* Eski sistemle uyumluluk: Kullanici var ama setup_completed yok → tamamlanmis say */
+if (!setupFlag && userCount_ > 0) {
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('setup_completed', 'true')").run();
+  console.log('[SETUP] Mevcut kullanicilar tespit edildi, kurulum tamamlandi olarak isaretlendi');
+}
+
+/** Kurulum tamamlanmis mi? */
+function isSetupCompleted() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'setup_completed'").get();
+  return row && row.value === 'true';
+}
+
 /* Indexler */
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_ts ON telemetry(ts);
@@ -205,14 +221,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_fw_assign_device ON firmware_assignments(device_id);
   CREATE INDEX IF NOT EXISTS idx_fw_assign_status ON firmware_assignments(status);
 `);
-
-/* Varsayilan admin kullanici olustur (yoksa) */
-const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('PrimeTech');
-if (!adminExists) {
-  const hash = bcrypt.hashSync('PrimeTech2026.akgol', 10);
-  db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)').run('PrimeTech', hash, 'admin');
-  console.log('[AUTH] Varsayilan admin kullanici olusturuldu: PrimeTech');
-}
 
 /* Hazir sorgular */
 const stmtInsert = db.prepare(`
@@ -322,8 +330,15 @@ function requireAdmin(req, res, next) {
  *             Login sayfasi acik, diger sayfalar korunmali
  * ============================================================================ */
 
+/* Kurulum sayfasi — auth gerektirmez, sadece setup tamamlanmamissa */
+app.get('/setup.html', (req, res) => {
+  if (isSetupCompleted()) return res.redirect('/login.html');
+  res.sendFile(path.join(__dirname, 'public', 'setup.html'));
+});
+
 /* Login sayfasi — auth gerektirmez */
 app.get('/login.html', (req, res) => {
+  if (!isSetupCompleted()) return res.redirect('/setup.html');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
@@ -334,8 +349,11 @@ app.get('/totp-setup.html', (req, res) => {
 });
 
 /* Korunan dashboard sayfalari */
-app.get('/', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.get('/', (req, res) => {
+  if (!isSetupCompleted()) return res.redirect('/setup.html');
+  return requireAuth(req, res, () => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
 });
 app.get('/index.html', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -357,6 +375,120 @@ app.get('/admin.html', (req, res) => {
 
 /* CSS/JS/resim gibi statik dosyalar icin (font, favicon vs.) */
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+
+/* ============================================================================
+ *                       KURULUM (SETUP) ENDPOINTLERI
+ * ============================================================================ */
+
+/** GET /api/setup/status — Kurulum tamamlandi mi? */
+app.get('/api/setup/status', (req, res) => {
+  res.json({ completed: isSetupCompleted() });
+});
+
+/** POST /api/setup/complete — Ilk kurulumu tamamla */
+app.post('/api/setup/complete', (req, res) => {
+  /* Zaten kurulmus mu? */
+  if (isSetupCompleted()) {
+    return res.status(400).json({ error: 'Sistem zaten kurulmus' });
+  }
+
+  const {
+    /* Hesap bilgileri */
+    username, password,
+    /* Kisisel bilgiler */
+    full_name, phone, email, age,
+    /* Ciftlik bilgileri */
+    city, farm_name, farm_area_ha, crop_type,
+    /* Site ayarlari */
+    site_name, site_subtitle
+  } = req.body;
+
+  /* Zorunlu alan kontrolleri */
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Kullanici adi ve sifre zorunlu' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Sifre en az 6 karakter olmali' });
+  }
+  if (!full_name || !phone || !email) {
+    return res.status(400).json({ error: 'Ad soyad, telefon ve e-posta zorunlu' });
+  }
+
+  try {
+    /* Admin kullanici olustur */
+    const hash = bcrypt.hashSync(password, 10);
+    db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)')
+      .run(username.trim(), hash, 'admin');
+
+    /* Kisisel bilgileri kaydet */
+    const ownerSettings = {
+      owner_name: full_name.trim(),
+      owner_phone: phone.trim(),
+      owner_email: email.trim(),
+      owner_age: (age || '').toString(),
+      owner_city: (city || '').trim(),
+      farm_name: (farm_name || '').trim(),
+      farm_area_ha: (farm_area_ha || '').toString(),
+      crop_type: (crop_type || '').trim()
+    };
+
+    const stmtSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    for (const [k, v] of Object.entries(ownerSettings)) {
+      stmtSetting.run(k, v);
+    }
+
+    /* Site ayarlari */
+    if (site_name) stmtSetting.run('site_name', site_name.trim());
+    if (site_subtitle) stmtSetting.run('site_subtitle', site_subtitle.trim());
+
+    /* Kurulumu tamamla */
+    stmtSetting.run('setup_completed', 'true');
+
+    console.log(`[SETUP] Ilk kurulum tamamlandi! Admin: ${username}`);
+    res.json({ ok: true, message: 'Kurulum tamamlandi' });
+  } catch (err) {
+    console.error('[SETUP] Hata:', err.message);
+    if (err.message.includes('UNIQUE')) {
+      return res.status(409).json({ error: 'Bu kullanici adi zaten var' });
+    }
+    res.status(500).json({ error: 'Kurulum sirasinda hata olustu' });
+  }
+});
+
+/** POST /api/factory-reset — Fabrika ayarlarina don (admin) */
+app.post('/api/factory-reset', requireAdmin, (req, res) => {
+  const { confirm_text } = req.body;
+
+  /* Guvenlik: Kullanici "FABRIKA AYARLARI" yazmali */
+  if (confirm_text !== 'FABRIKA AYARLARI') {
+    return res.status(400).json({ error: 'Onay icin "FABRIKA AYARLARI" yazin' });
+  }
+
+  try {
+    /* Tum kullanicilari sil */
+    db.prepare('DELETE FROM users').run();
+
+    /* Ayarlari sifirla */
+    db.prepare('DELETE FROM settings').run();
+
+    /* Varsayilan ayarlari geri yaz */
+    const stmtSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+    stmtSetting.run('site_name', 'PRIME MIBZER');
+    stmtSetting.run('site_subtitle', 'Cihaz Yonetim Paneli');
+    /* setup_completed KASITLI olarak eklenmedi — kurulum tekrar gosterilecek */
+
+    /* Oturumu kapat */
+    if (req.session) {
+      req.session.destroy(() => {});
+    }
+
+    console.log('[ADMIN] !!! FABRIKA AYARLARINA DONULDU !!!');
+    res.json({ ok: true, message: 'Fabrika ayarlarina donuldu. Sayfa yeniden yuklenecek.' });
+  } catch (err) {
+    console.error('[ADMIN] Fabrika ayari hatasi:', err.message);
+    res.status(500).json({ error: 'Sifirlama sirasinda hata olustu' });
+  }
+});
 
 /* ============================================================================
  *                       AUTH ENDPOINTLERI

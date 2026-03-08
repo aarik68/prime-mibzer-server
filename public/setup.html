@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kurulum — Prime Mibzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00e5a0;
+    --accent2: #0077ff;
+    --text: #e8eaf0;
+    --muted: #4a5068;
+    --danger: #ff4545;
+    --warning: #ff9800;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .wizard {
+    position: relative;
+    z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 480px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 32px;
+  }
+
+  .progress-dot {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    transition: background 0.4s;
+  }
+
+  .progress-dot.active { background: var(--accent); }
+  .progress-dot.done { background: rgba(0,229,160,0.4); }
+
+  /* Step counter */
+  .step-info {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  /* Icons */
+  .step-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(0,229,160,0.08);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .step-icon svg { width: 28px; height: 28px; color: var(--accent); }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    letter-spacing: 0.5px;
+    line-height: 1.6;
+  }
+
+  /* Form */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-row.full { grid-template-columns: 1fr; }
+
+  .form-group { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+  }
+
+  label .req { color: var(--danger); }
+
+  input, select {
+    width: 100%;
+    padding: 11px 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a5068' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+  }
+
+  input::placeholder { color: var(--muted); opacity: 0.6; }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0c0f;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 4px 20px rgba(0,229,160,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    flex: 0 0 auto;
+    padding: 13px 20px;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--muted);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Messages */
+  .msg {
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .msg.error { background: rgba(255,69,69,0.1); border: 1px solid rgba(255,69,69,0.2); color: var(--danger); }
+  .msg.success { background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.2); color: var(--accent); }
+  .msg.show { display: block; }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: #0a0c0f;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  /* Steps hidden by default */
+  .step { display: none; }
+  .step.active { display: block; animation: fadeUp 0.4s ease both; }
+
+  /* Welcome step decorative */
+  .welcome-logo {
+    width: 72px;
+    height: 72px;
+    background: var(--accent);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+  }
+
+  .welcome-logo svg { width: 36px; height: 36px; }
+
+  .welcome-title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+
+  .welcome-sub {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    line-height: 1.7;
+  }
+
+  .feature-list {
+    list-style: none;
+    margin-bottom: 24px;
+  }
+
+  .feature-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0.9;
+  }
+
+  .feature-list li .fi {
+    width: 28px;
+    height: 28px;
+    background: rgba(0,229,160,0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Success step */
+  .success-check {
+    width: 72px;
+    height: 72px;
+    background: rgba(0,229,160,0.12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+  }
+
+  .success-check svg { width: 36px; height: 36px; color: var(--accent); }
+
+  .success-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+
+  .success-sub {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    line-height: 1.7;
+  }
+
+  /* Password strength */
+  .pw-strength {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  .pw-strength-bar {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+    transition: width 0.3s, background 0.3s;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 500px) {
+    .wizard { padding: 28px 20px; }
+    .form-row { grid-template-columns: 1fr; }
+    h1 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wizard">
+  <!-- Progress -->
+  <div class="progress-bar">
+    <div class="progress-dot active" id="p0"></div>
+    <div class="progress-dot" id="p1"></div>
+    <div class="progress-dot" id="p2"></div>
+    <div class="progress-dot" id="p3"></div>
+    <div class="progress-dot" id="p4"></div>
+  </div>
+
+  <!-- ADIM 0: Hos Geldiniz -->
+  <div class="step active" id="step0">
+    <div class="welcome-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0a0c0f" stroke-width="2.5" stroke-linecap="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <div class="welcome-title">Hos <span style="color:var(--accent)">Geldiniz</span></div>
+    <div class="welcome-sub">
+      Prime Mibzer Hassas Ekim Sistemi'ni kurmak uzeresiniz.<br>
+      Bu kurulum sadece birkaç dakika surecek.
+    </div>
+
+    <ul class="feature-list">
+      <li><span class="fi">&#128100;</span> Admin hesabinizi olusturun</li>
+      <li><span class="fi">&#128222;</span> Iletisim bilgilerinizi girin</li>
+      <li><span class="fi">&#127806;</span> Ciftlik bilgilerinizi ekleyin</li>
+      <li><span class="fi">&#128274;</span> 2FA guvenlik kurulumu yapin</li>
+    </ul>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goStep(1)">Kuruluma Basla &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ADIM 1: Site Ayari + Admin Hesap -->
+  <div class="step" id="step1">
+    <div class="step-info">ADIM 1 / 4</div>
+    <div class="step-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </div>
+    <h1>Admin <span>Hesabi</span></h1>
+    <div class="subtitle">Sisteme erisim icin kullanacaginiz hesap bilgileri</div>
+
+    <div class="msg error" id="err1"></div>
+
+    <div class="form-row full">
+      <div class="form-group">
+        <label>Site Adi <span class="req">*</span></label>
+        <input type="text" id="inSiteName" placeholder="PRIME MIBZER" value="PRIME MIBZER">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Kullanici Adi <span class="req">*</span></label>
+        <input type="text" id="inUsername" placeholder="ornek: admin" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>E-posta <span class="req">*</span></label>
+        <input type="email" id="inEmail" placeholder="ornek@gmail.com">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Sifre <span class="req">*</span></label>
+        <input type="password" id="inPassword" placeholder="En az 6 karakter" autocomplete="new-password">
+        <div class="pw-strength"><div class="pw-strength-bar" id="pwBar"></div></div>
+      </div>
+      <div class="form-group">
+        <label>Sifre Tekrar <span class="req">*</span></label>
+        <input type="password" id="inPassword2" placeholder="Sifre tekrar" autocomplete="new-password">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goStep(0)">&#8592; Geri</button>
+      <button class="btn btn-primary" onclick="goStep(2)">Devam &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ADIM 2: Kisisel Bilgiler -->
+  <div class="step" id="step2">
+    <div class="step-info">ADIM 2 / 4</div>
+    <div class="step-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/>
+        <circle cx="8.5" cy="7" r="4"/>
+        <line x1="20" y1="8" x2="20" y2="14"/>
+        <line x1="23" y1="11" x2="17" y2="11"/>
+      </svg>
+    </div>
+    <h1>Kisisel <span>Bilgiler</span></h1>
+    <div class="subtitle">Hesap sahibinin iletisim bilgileri</div>
+
+    <div class="msg error" id="err2"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Ad Soyad <span class="req">*</span></label>
+        <input type="text" id="inFullName" placeholder="Ahmet Yilmaz">
+      </div>
+      <div class="form-group">
+        <label>Telefon <span class="req">*</span></label>
+        <input type="tel" id="inPhone" placeholder="05XX XXX XX XX">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Yas</label>
+        <input type="number" id="inAge" placeholder="35" min="18" max="99">
+      </div>
+      <div class="form-group">
+        <label>Il <span class="req">*</span></label>
+        <select id="inCity">
+          <option value="">Il secin...</option>
+          <option>Adana</option><option>Adiyaman</option><option>Afyonkarahisar</option>
+          <option>Agri</option><option>Aksaray</option><option>Amasya</option>
+          <option>Ankara</option><option>Antalya</option><option>Ardahan</option>
+          <option>Artvin</option><option>Aydin</option><option>Balikesir</option>
+          <option>Bartin</option><option>Batman</option><option>Bayburt</option>
+          <option>Bilecik</option><option>Bingol</option><option>Bitlis</option>
+          <option>Bolu</option><option>Burdur</option><option>Bursa</option>
+          <option>Canakkale</option><option>Cankiri</option><option>Corum</option>
+          <option>Denizli</option><option>Diyarbakir</option><option>Duzce</option>
+          <option>Edirne</option><option>Elazig</option><option>Erzincan</option>
+          <option>Erzurum</option><option>Eskisehir</option><option>Gaziantep</option>
+          <option>Giresun</option><option>Gumushane</option><option>Hakkari</option>
+          <option>Hatay</option><option>Igdir</option><option>Isparta</option>
+          <option>Istanbul</option><option>Izmir</option><option>Kahramanmaras</option>
+          <option>Karabuk</option><option>Karaman</option><option>Kars</option>
+          <option>Kastamonu</option><option>Kayseri</option><option>Kilis</option>
+          <option>Kirikkale</option><option>Kirklareli</option><option>Kirsehir</option>
+          <option>Kocaeli</option><option>Konya</option><option>Kutahya</option>
+          <option>Malatya</option><option>Manisa</option><option>Mardin</option>
+          <option>Mersin</option><option>Mugla</option><option>Mus</option>
+          <option>Nevsehir</option><option>Nigde</option><option>Ordu</option>
+          <option>Osmaniye</option><option>Rize</option><option>Sakarya</option>
+          <option>Samsun</option><option>Sanliurfa</option><option>Siirt</option>
+          <option>Sinop</option><option>Sirnak</option><option>Sivas</option>
+          <option>Tekirdag</option><option>Tokat</option><option>Trabzon</option>
+          <option>Tunceli</option><option>Usak</option><option>Van</option>
+          <option>Yalova</option><option>Yozgat</option><option>Zonguldak</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goStep(1)">&#8592; Geri</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Devam &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ADIM 3: Ciftlik Bilgileri -->
+  <div class="step" id="step3">
+    <div class="step-info">ADIM 3 / 4</div>
+    <div class="step-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <h1>Ciftlik <span>Bilgileri</span></h1>
+    <div class="subtitle">Ekim yaptiginiz alan hakkinda bilgiler</div>
+
+    <div class="msg error" id="err3"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Ciftlik / Isletme Adi</label>
+        <input type="text" id="inFarmName" placeholder="ornek: Yilmaz Ciftligi">
+      </div>
+      <div class="form-group">
+        <label>Toplam Ekim Alani (hektar)</label>
+        <input type="number" id="inFarmArea" placeholder="150" min="0" step="0.1">
+      </div>
+    </div>
+    <div class="form-row full">
+      <div class="form-group">
+        <label>Urun Tipi</label>
+        <select id="inCropType">
+          <option value="">Urun tipi secin...</option>
+          <option>Misir</option>
+          <option>Aycicegi</option>
+          <option>Pamuk</option>
+          <option>Soya</option>
+          <option>Bugday</option>
+          <option>Arpa</option>
+          <option>Kanola</option>
+          <option>Seker Pancari</option>
+          <option>Fasulye</option>
+          <option>Nohut</option>
+          <option>Mercimek</option>
+          <option>Susam</option>
+          <option>Karisik</option>
+          <option>Diger</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goStep(2)">&#8592; Geri</button>
+      <button class="btn btn-primary" id="btnComplete" onclick="doSetup()">Kurulumu Tamamla &#10003;</button>
+    </div>
+  </div>
+
+  <!-- ADIM 4: Tamamlandi -->
+  <div class="step" id="step4">
+    <div class="success-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+    <div class="success-title">Kurulum <span style="color:var(--accent)">Tamam!</span></div>
+    <div class="success-sub">
+      Sisteminiz basariyla kuruldu.<br>
+      Simdi giris yapip 2FA guvenlik kurulumuna geçeceksiniz.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="window.location.href='/login.html'" style="font-size:16px;padding:15px">
+        Girise Git &#8594;
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  let currentStep = 0;
+  const totalSteps = 5;
+
+  /* Adim gecisleri */
+  function goStep(n) {
+    /* Validasyon */
+    if (n > currentStep) {
+      const err = validateStep(currentStep);
+      if (err) return;
+    }
+
+    /* Onceki adimi gizle */
+    $('step' + currentStep).classList.remove('active');
+
+    /* Yeni adimi goster */
+    currentStep = n;
+    $('step' + currentStep).classList.add('active');
+
+    /* Progress bar guncelle */
+    for (let i = 0; i < totalSteps; i++) {
+      const dot = $('p' + i);
+      dot.classList.remove('active', 'done');
+      if (i === currentStep) dot.classList.add('active');
+      else if (i < currentStep) dot.classList.add('done');
+    }
+  }
+
+  /* Adim validasyonu */
+  function validateStep(step) {
+    if (step === 1) {
+      const username = $('inUsername').value.trim();
+      const email = $('inEmail').value.trim();
+      const pw = $('inPassword').value;
+      const pw2 = $('inPassword2').value;
+
+      if (!$('inSiteName').value.trim()) return showErr('err1', 'Site adi zorunlu');
+      if (!username) return showErr('err1', 'Kullanici adi zorunlu');
+      if (username.length < 3) return showErr('err1', 'Kullanici adi en az 3 karakter olmali');
+      if (!email) return showErr('err1', 'E-posta zorunlu');
+      if (!email.includes('@')) return showErr('err1', 'Gecerli bir e-posta girin');
+      if (!pw) return showErr('err1', 'Sifre zorunlu');
+      if (pw.length < 6) return showErr('err1', 'Sifre en az 6 karakter olmali');
+      if (pw !== pw2) return showErr('err1', 'Sifreler uyusmuyor');
+      hideErr('err1');
+    }
+
+    if (step === 2) {
+      if (!$('inFullName').value.trim()) return showErr('err2', 'Ad soyad zorunlu');
+      if (!$('inPhone').value.trim()) return showErr('err2', 'Telefon numarasi zorunlu');
+      if (!$('inCity').value) return showErr('err2', 'Il seciniz');
+      hideErr('err2');
+    }
+
+    return null;
+  }
+
+  function showErr(id, msg) {
+    const el = $(id);
+    el.textContent = msg;
+    el.classList.add('show');
+    return true;
+  }
+
+  function hideErr(id) {
+    $(id).classList.remove('show');
+  }
+
+  /* Sifre guc gostergesi */
+  $('inPassword').addEventListener('input', e => {
+    const pw = e.target.value;
+    const bar = $('pwBar');
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 10) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    const pct = (score / 5) * 100;
+    bar.style.width = pct + '%';
+    if (score <= 1) bar.style.background = 'var(--danger)';
+    else if (score <= 3) bar.style.background = 'var(--warning)';
+    else bar.style.background = 'var(--accent)';
+  });
+
+  /* Kurulumu tamamla */
+  async function doSetup() {
+    /* Son adim validasyonu */
+    const err = validateStep(3);
+    /* Adim 3'te zorunlu alan yok, devam */
+
+    const btn = $('btnComplete');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Kuruluyor...';
+
+    const data = {
+      /* Hesap */
+      username: $('inUsername').value.trim(),
+      password: $('inPassword').value,
+      email: $('inEmail').value.trim(),
+      /* Kisisel */
+      full_name: $('inFullName').value.trim(),
+      phone: $('inPhone').value.trim(),
+      age: $('inAge').value || '',
+      /* Ciftlik */
+      city: $('inCity').value,
+      farm_name: $('inFarmName').value.trim(),
+      farm_area_ha: $('inFarmArea').value || '',
+      crop_type: $('inCropType').value,
+      /* Site */
+      site_name: $('inSiteName').value.trim(),
+      site_subtitle: 'Cihaz Yonetim Paneli'
+    };
+
+    try {
+      const r = await fetch('/api/setup/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const d = await r.json();
+
+      if (!r.ok) {
+        showErr('err3', d.error || 'Hata olustu');
+        btn.disabled = false;
+        btn.innerHTML = 'Kurulumu Tamamla &#10003;';
+        return;
+      }
+
+      /* Basari — son adima gec */
+      goStep(4);
+    } catch (e) {
+      showErr('err3', 'Sunucu baglantisi kurulamadi');
+      btn.disabled = false;
+      btn.innerHTML = 'Kurulumu Tamamla &#10003;';
+    }
+  }
+
+  /* Sayfa yuklenince: Kurulum zaten tamamlanmissa login'e yonlendir */
+  fetch('/api/setup/status').then(r => r.json()).then(d => {
+    if (d.completed) window.location.href = '/login.html';
+  }).catch(() => {});
+</script>
+</body>
+</html>
