@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B0E17">
+<title>Prime Mibzer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0B0E17;--card:#141924;--border:#1E2A3A;--primary:#00B4FF;--success:#00E676;
+--warning:#FFB300;--danger:#FF1744;--text:#FFF;--dim:#7A8BA0;--spacing:#55EFC4}
+body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);
+padding:8px;max-width:480px;margin:0 auto;-webkit-font-smoothing:antialiased;min-height:100vh}
+h1{color:var(--primary);text-align:center;font-size:1.2em;padding:10px 0 6px;letter-spacing:1px}
+.status{text-align:center;font-size:.75em;color:var(--dim);padding:2px 0 8px}
+.status .on{color:var(--success)}.status .off{color:var(--danger)}
+/* Buyuk gostergeler */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.hero .card{text-align:center;padding:12px 8px}
+.hero .val{font-size:2.2em;font-weight:800;line-height:1.1}
+.hero .lbl{font-size:.7em;color:var(--dim);margin-top:2px;text-transform:uppercase}
+/* Kartlar */
+.card{background:var(--card);border-radius:10px;padding:10px 12px;margin-bottom:8px;
+border:1px solid var(--border)}
+.card h2{color:var(--primary);font-size:.85em;margin-bottom:6px;letter-spacing:.5px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:.85em}
+.row .k{color:var(--dim)}.row .v{font-weight:600;text-align:right}
+/* Durum noktasi */
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.dot.g{background:var(--success)}.dot.r{background:var(--danger)}.dot.y{background:var(--warning)}
+/* Mini grafik */
+.chart-wrap{height:80px;position:relative;margin:6px 0}
+canvas{width:100%;height:100%;display:block}
+/* Sekmeler */
+.tabs{display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{flex:0 0 auto;padding:6px 14px;border-radius:20px;font-size:.78em;font-weight:600;
+background:var(--border);color:var(--dim);cursor:pointer;border:none;white-space:nowrap}
+.tab.active{background:var(--primary);color:#fff}
+/* Ekim bar */
+.bar-wrap{display:flex;align-items:center;gap:6px;padding:2px 0}
+.bar{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.bar-val{font-size:.8em;font-weight:700;min-width:42px;text-align:right}
+/* Refresh indicator */
+.pulse{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+
+<h1>&#9881; PRIME MIBZER</h1>
+<div class="status">
+  <span id="conn" class="off">&#9679; Baglanti bekleniyor...</span>
+  <span id="ago" style="margin-left:8px"></span>
+</div>
+
+<!-- Buyuk gostergeler -->
+<div class="hero">
+  <div class="card">
+    <div class="val" style="color:var(--primary)" id="spd">--</div>
+    <div class="lbl">km/h</div>
+  </div>
+  <div class="card">
+    <div class="val" style="color:var(--spacing)" id="spc">--</div>
+    <div class="lbl">cm aralik</div>
+  </div>
+</div>
+
+<!-- Sekmeler -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('main')">Ana</button>
+  <button class="tab" onclick="showTab('seeding')">Ekim</button>
+  <button class="tab" onclick="showTab('gps')">GPS</button>
+  <button class="tab" onclick="showTab('sensors')">Sensor</button>
+  <button class="tab" onclick="showTab('system')">Sistem</button>
+  <button class="tab" onclick="showTab('chart')">Grafik</button>
+</div>
+
+<!-- ANA -->
+<div id="p-main" class="page">
+  <div class="card">
+    <h2>&#128640; DURUM</h2>
+    <div class="row"><span class="k">STM32 Baglanti</span><span class="v" id="lnk">--</span></div>
+    <div class="row"><span class="k">Guven</span><span class="v" id="cnf">--</span></div>
+    <div class="row"><span class="k">Motor</span><span class="v" id="mtr">--</span></div>
+    <div class="row"><span class="k">Alarm</span><span class="v" id="alm">--</span></div>
+  </div>
+  <div class="card">
+    <h2>&#127793; EKIM OZET</h2>
+    <div class="row"><span class="k">Toplam Tohum</span><span class="v" id="sd">--</span></div>
+    <div class="row"><span class="k">Alan</span><span class="v" id="ah">--</span></div>
+    <div class="row"><span class="k">Mesafe</span><span class="v" id="dm">--</span></div>
+  </div>
+</div>
+
+<!-- EKIM -->
+<div id="p-seeding" class="page" style="display:none">
+  <div class="card">
+    <h2>&#127793; EKIM DETAY</h2>
+    <div class="row"><span class="k">Toplam Tohum</span><span class="v" id="sd2">--</span></div>
+    <div class="row"><span class="k">Alan (ha)</span><span class="v" id="ah2">--</span></div>
+    <div class="row"><span class="k">Mesafe (m)</span><span class="v" id="dm2">--</span></div>
+    <div class="row"><span class="k">Hedef Aralik</span><span class="v" id="tgt">--</span></div>
+  </div>
+  <div class="card">
+    <h2>&#127919; PERFORMANS</h2>
+    <div class="bar-wrap">
+      <span class="k" style="min-width:60px">Tekli</span>
+      <div class="bar"><div class="bar-fill" id="bf-sg" style="width:0;background:var(--success)"></div></div>
+      <span class="bar-val" id="sg">--%</span>
+    </div>
+    <div class="bar-wrap">
+      <span class="k" style="min-width:60px">Bosluk</span>
+      <div class="bar"><div class="bar-fill" id="bf-ms" style="width:0;background:var(--warning)"></div></div>
+      <span class="bar-val" id="ms">--%</span>
+    </div>
+    <div class="bar-wrap">
+      <span class="k" style="min-width:60px">Cift</span>
+      <div class="bar"><div class="bar-fill" id="bf-db" style="width:0;background:var(--danger)"></div></div>
+      <span class="bar-val" id="db">--%</span>
+    </div>
+  </div>
+</div>
+
+<!-- GPS -->
+<div id="p-gps" class="page" style="display:none">
+  <div class="card">
+    <h2>&#128225; GPS</h2>
+    <div class="row"><span class="k">Konum</span><span class="v" id="pos">--</span></div>
+    <div class="row"><span class="k">Uydu</span><span class="v" id="sat">--</span></div>
+    <div class="row"><span class="k">GPS Hiz</span><span class="v" id="gspd">--</span></div>
+    <div class="row"><span class="k">Yon</span><span class="v" id="hdg">--</span></div>
+    <div class="row"><span class="k">Gecerli</span><span class="v" id="gval">--</span></div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;height:200px" id="map-card">
+    <div style="text-align:center;padding:80px 0;color:var(--dim);font-size:.85em">
+      GPS verisi gelince harita yuklenecek
+    </div>
+  </div>
+</div>
+
+<!-- SENSORLER -->
+<div id="p-sensors" class="page" style="display:none">
+  <div class="card">
+    <h2>&#128736; IMU</h2>
+    <div class="row"><span class="k">Pitch</span><span class="v" id="ipt">--</span></div>
+    <div class="row"><span class="k">Roll</span><span class="v" id="irl">--</span></div>
+    <div class="row"><span class="k">Titresim</span><span class="v" id="ivb">--</span></div>
+  </div>
+  <div class="card">
+    <h2>&#9881; DISK SENSORU</h2>
+    <div class="row"><span class="k">RPM</span><span class="v" id="drp">--</span></div>
+    <div class="row"><span class="k">Stabilite</span><span class="v" id="dst">--</span></div>
+    <div class="row"><span class="k">Bagli</span><span class="v" id="dco">--</span></div>
+  </div>
+  <div class="card">
+    <h2>&#127806; TOHUM SENSORU</h2>
+    <div class="row"><span class="k">Aralik CV</span><span class="v" id="scv">--</span></div>
+    <div class="row"><span class="k">Aktif</span><span class="v" id="sac">--</span></div>
+  </div>
+</div>
+
+<!-- SISTEM -->
+<div id="p-system" class="page" style="display:none">
+  <div class="card">
+    <h2>&#128187; SISTEM</h2>
+    <div class="row"><span class="k">Uptime</span><span class="v" id="upt">--</span></div>
+    <div class="row"><span class="k">CPU</span><span class="v" id="cpu">--</span></div>
+    <div class="row"><span class="k">WiFi RSSI</span><span class="v" id="rsi">--</span></div>
+    <div class="row"><span class="k">Hiz Kaynagi</span><span class="v" id="src">--</span></div>
+  </div>
+  <div class="card">
+    <h2>&#128202; SUNUCU</h2>
+    <div class="row"><span class="k">Toplam Kayit</span><span class="v" id="trc">--</span></div>
+    <div class="row"><span class="k">Sunucu Uptime</span><span class="v" id="sut">--</span></div>
+    <div class="row"><span class="k">Bellek</span><span class="v" id="smm">--</span></div>
+  </div>
+</div>
+
+<!-- GRAFIK -->
+<div id="p-chart" class="page" style="display:none">
+  <div class="card">
+    <h2>&#128200; HIZ (son 1 saat)</h2>
+    <div class="chart-wrap"><canvas id="c-spd"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>&#128200; ARALIK (son 1 saat)</h2>
+    <div class="chart-wrap"><canvas id="c-spc"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>&#128200; TEKLI ORAN (son 1 saat)</h2>
+    <div class="chart-wrap"><canvas id="c-sg"></canvas></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+ *                           SEKME YONETIMI
+ * ============================================================================ */
+const tabs = document.querySelectorAll('.tab');
+function showTab(id) {
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.getElementById('p-' + id).style.display = 'block';
+  tabs.forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  if (id === 'chart') drawCharts();
+}
+
+/* ============================================================================
+ *                           VERI GUNCELLEME
+ * ============================================================================ */
+const SRC = ['---', 'ENK', 'RAD', 'GPS', 'FUZ'];
+let lastData = null;
+
+function el(id) { return document.getElementById(id); }
+function fmt(v, d) { return v != null ? v.toFixed(d) : '--'; }
+function yn(v) { return v ? '<span class="dot g"></span>Evet' : '<span class="dot r"></span>Hayir'; }
+function ago(ts) {
+  if (!ts) return '';
+  const d = new Date(ts + 'Z');
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 5) return 'simdi';
+  if (s < 60) return s + ' sn once';
+  if (s < 3600) return Math.floor(s/60) + ' dk once';
+  return Math.floor(s/3600) + ' sa once';
+}
+
+function update(d) {
+  if (!d || d.empty) {
+    el('conn').className = 'off';
+    el('conn').innerHTML = '&#9679; Veri bekleniyor...';
+    return;
+  }
+  lastData = d;
+
+  /* Baglanti durumu */
+  const fresh = d.ts && (Date.now() - new Date(d.ts + 'Z').getTime()) < 30000;
+  el('conn').className = fresh ? 'on' : 'off';
+  el('conn').innerHTML = (fresh ? '&#9679; Canli' : '&#9679; Eski veri');
+  el('ago').textContent = ago(d.ts);
+
+  /* Hero */
+  el('spd').textContent = fmt(d.speed_kmh, 1);
+  el('spc').textContent = fmt(d.spacing_cm, 1);
+
+  /* Ana */
+  el('lnk').innerHTML = d.link ? '<span class="dot g"></span>AKTIF' : '<span class="dot r"></span>KOPUK';
+  el('cnf').textContent = '%' + (d.confidence || 0);
+  el('mtr').innerHTML = d.motor_enabled
+    ? '<span class="dot g"></span>' + fmt(d.motor_hz, 1) + ' Hz'
+    : '<span class="dot y"></span>KAPALI';
+  el('alm').innerHTML = d.alarm_count > 0
+    ? '<span class="dot r"></span>' + d.alarm_count + ' alarm'
+    : '<span class="dot g"></span>Yok';
+  el('sd').textContent = d.seeds || 0;
+  el('ah').textContent = fmt(d.area_ha, 2) + ' ha';
+  el('dm').textContent = fmt(d.distance_m, 0) + ' m';
+
+  /* Ekim */
+  el('sd2').textContent = d.seeds || 0;
+  el('ah2').textContent = fmt(d.area_ha, 3);
+  el('dm2').textContent = fmt(d.distance_m, 1);
+  el('tgt').textContent = fmt(d.target_cm, 1) + ' cm';
+  var sg = (d.singulation || 0) / 100;
+  var ms = (d.miss || 0) / 100;
+  var db = (d.double_pct || 0) / 100;
+  el('sg').textContent = sg.toFixed(1) + '%';
+  el('ms').textContent = ms.toFixed(1) + '%';
+  el('db').textContent = db.toFixed(1) + '%';
+  el('bf-sg').style.width = Math.min(sg, 100) + '%';
+  el('bf-ms').style.width = Math.min(ms, 100) + '%';
+  el('bf-db').style.width = Math.min(db, 100) + '%';
+
+  /* GPS */
+  el('pos').textContent = d.gps_valid ? fmt(d.lat, 5) + ', ' + fmt(d.lon, 5) : '--';
+  el('sat').textContent = d.satellites || 0;
+  el('gspd').textContent = fmt(d.gps_speed, 1) + ' km/h';
+  el('hdg').textContent = fmt(d.heading, 0) + '\u00B0';
+  el('gval').innerHTML = yn(d.gps_valid);
+
+  /* Sensorler */
+  el('ipt').textContent = fmt(d.pitch, 1) + '\u00B0';
+  el('irl').textContent = fmt(d.roll_deg, 1) + '\u00B0';
+  el('ivb').innerHTML = d.vibration ? '<span class="dot r"></span>VAR' : '<span class="dot g"></span>Yok';
+  el('drp').textContent = fmt(d.disk_rpm, 1);
+  el('dst').textContent = fmt(d.disk_stability, 1) + '%';
+  el('dco').innerHTML = yn(d.disk_connected);
+  el('scv').textContent = fmt(d.seed_spacing_cv, 1) + '%';
+  el('sac').innerHTML = yn(d.seed_active);
+
+  /* Sistem */
+  var up = (d.uptime_ms || 0) / 1000;
+  var h = Math.floor(up / 3600), m = Math.floor((up % 3600) / 60);
+  el('upt').textContent = h + 's ' + m + 'd';
+  el('cpu').textContent = '%' + (d.cpu_load || 0);
+  el('rsi').textContent = (d.wifi_rssi || 0) + ' dBm';
+  el('src').textContent = SRC[d.speed_source || 0] || '?';
+}
+
+/* Periyodik veri cekme */
+function fetchLatest() {
+  fetch('/api/latest').then(r => r.json()).then(update).catch(() => {
+    el('conn').className = 'off';
+    el('conn').innerHTML = '&#9679; Sunucu hatasi';
+  });
+}
+
+/* Sunucu bilgisi */
+function fetchHealth() {
+  fetch('/api/health').then(r => r.json()).then(d => {
+    el('trc').textContent = d.records;
+    var u = d.uptime;
+    var h = Math.floor(u / 3600), m = Math.floor((u % 3600) / 60);
+    el('sut').textContent = h + 's ' + m + 'd';
+    el('smm').textContent = d.memory;
+  }).catch(() => {});
+}
+
+/* ============================================================================
+ *                           MINI GRAFIK
+ * ============================================================================ */
+function miniChart(canvasId, data, color, label) {
+  var c = document.getElementById(canvasId);
+  if (!c || !data.length) return;
+  var ctx = c.getContext('2d');
+  var W = c.width = c.parentElement.clientWidth;
+  var H = c.height = c.parentElement.clientHeight;
+
+  var vals = data.map(d => d[label] || 0);
+  var min = Math.min(...vals), max = Math.max(...vals);
+  if (max === min) { max += 1; min -= 1; }
+  var pad = (max - min) * 0.1;
+  min -= pad; max += pad;
+
+  ctx.clearRect(0, 0, W, H);
+
+  /* Izgaralar */
+  ctx.strokeStyle = '#1E2A3A';
+  ctx.lineWidth = 0.5;
+  for (var i = 0; i < 4; i++) {
+    var y = H * i / 3;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  /* Cizgi */
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (var i = 0; i < vals.length; i++) {
+    var x = (i / (vals.length - 1)) * W;
+    var y = H - ((vals[i] - min) / (max - min)) * H;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  /* Min/Max etiket */
+  ctx.fillStyle = '#7A8BA0';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText(max.toFixed(1), 4, 12);
+  ctx.fillText(min.toFixed(1), 4, H - 4);
+
+  /* Son deger */
+  ctx.fillStyle = color;
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText(vals[vals.length - 1].toFixed(1), W - 4, 14);
+}
+
+function drawCharts() {
+  fetch('/api/history?period=-1 hour&limit=200').then(r => r.json()).then(rows => {
+    if (!rows.length) return;
+    rows.reverse(); /* eskiden yeniye */
+    miniChart('c-spd', rows, '#00B4FF', 'speed_kmh');
+    miniChart('c-spc', rows, '#55EFC4', 'spacing_cm');
+    miniChart('c-sg', rows, '#00E676', 'singulation');
+  }).catch(() => {});
+}
+
+/* ============================================================================
+ *                           BASLANGIC
+ * ============================================================================ */
+fetchLatest();
+fetchHealth();
+setInterval(fetchLatest, 2000);
+setInterval(fetchHealth, 30000);
+</script>
+</body>
+</html>
