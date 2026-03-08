@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giris — Prime Mibzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00e5a0;
+    --accent2: #0077ff;
+    --text: #e8eaf0;
+    --muted: #4a5068;
+    --danger: #ff4545;
+    --warning: #ff9800;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .login-box {
+    position: relative;
+    z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 400px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-icon svg { width: 22px; height: 22px; }
+
+  h1 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Steps */
+  .step { display: none; }
+  .step.active { display: block; animation: fadeUp 0.3s ease both; }
+
+  .step-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .step-indicator {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .step-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .step-dot.done {
+    background: var(--accent);
+    opacity: 0.5;
+  }
+
+  /* Form */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+  }
+
+  input::placeholder {
+    color: var(--muted);
+    opacity: 0.6;
+  }
+
+  /* TOTP Code Input */
+  .totp-inputs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .totp-inputs input {
+    width: 44px;
+    height: 52px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  .totp-inputs input::-webkit-inner-spin-button,
+  .totp-inputs input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+
+  .totp-inputs input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+  }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0c0f;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 4px 20px rgba(0,229,160,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Error message */
+  .error-msg {
+    background: rgba(255,69,69,0.1);
+    border: 1px solid rgba(255,69,69,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--danger);
+    margin-bottom: 16px;
+    display: none;
+    animation: shake 0.3s ease;
+  }
+
+  .error-msg.show { display: block; }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: #0a0c0f;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  /* Lock icon for TOTP step */
+  .lock-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    width: 56px;
+    height: 56px;
+    background: rgba(0,229,160,0.08);
+    border-radius: 16px;
+  }
+
+  .lock-icon svg { width: 28px; height: 28px; color: var(--accent); }
+
+  .totp-hint {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 440px) {
+    .login-box { padding: 28px 20px; }
+    .totp-inputs input { width: 38px; height: 46px; font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-box">
+  <div class="logo-row">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0a0c0f" stroke-width="2.5" stroke-linecap="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <h1>Prime <span>Mibzer</span></h1>
+  </div>
+  <div class="subtitle">GUVENLI GIRIS</div>
+
+  <div class="step-indicator">
+    <div class="step-dot active" id="dot1"></div>
+    <div class="step-dot" id="dot2"></div>
+  </div>
+
+  <!-- ADIM 1: Kullanici Adi + Sifre -->
+  <div class="step active" id="step1">
+    <div class="step-label">Adim 1 — Kimlik Dogrulama</div>
+    <div class="error-msg" id="err1"></div>
+
+    <div class="form-group">
+      <label>Kullanici Adi</label>
+      <input type="text" id="username" placeholder="Kullanici adinizi girin" autocomplete="username" autofocus>
+    </div>
+
+    <div class="form-group">
+      <label>Sifre</label>
+      <input type="password" id="password" placeholder="Sifrenizi girin" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary" id="btnLogin" onclick="doLogin()">Giris Yap</button>
+  </div>
+
+  <!-- ADIM 2: TOTP Kodu -->
+  <div class="step" id="step2">
+    <div class="lock-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <div class="step-label" style="text-align:center">Adim 2 — Dogrulama Kodu</div>
+    <div class="totp-hint">Google Authenticator uygulamanizdan<br>6 haneli kodu girin</div>
+    <div class="error-msg" id="err2"></div>
+
+    <div class="totp-inputs" id="totpContainer">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="0">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="1">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="2">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="3">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="4">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="5">
+    </div>
+
+    <button class="btn btn-primary" id="btnTotp" onclick="doTotp()">Dogrula</button>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  /* ---- ADIM 1: Giris ---- */
+  async function doLogin() {
+    const btn = $('btnLogin');
+    const errEl = $('err1');
+    errEl.classList.remove('show');
+
+    const username = $('username').value.trim();
+    const password = $('password').value;
+
+    if (!username || !password) {
+      showErr(errEl, 'Kullanici adi ve sifre gerekli');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Dogrulaniyor...';
+
+    try {
+      const r = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const d = await r.json();
+
+      if (!r.ok) {
+        showErr(errEl, d.error || 'Giris hatasi');
+        btn.disabled = false;
+        btn.textContent = 'Giris Yap';
+        return;
+      }
+
+      if (d.step === 'totp') {
+        /* TOTP kodu iste */
+        goStep2();
+      } else if (d.step === 'totp-setup') {
+        /* Ilk kurulum — QR sayfasina yonlendir */
+        window.location.href = '/totp-setup.html';
+      }
+    } catch (e) {
+      showErr(errEl, 'Sunucu baglantisi kurulamadi');
+      btn.disabled = false;
+      btn.textContent = 'Giris Yap';
+    }
+  }
+
+  /* Enter tusu ile login */
+  $('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  $('username').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('password').focus();
+  });
+
+  /* ---- ADIM 2: TOTP ---- */
+  function goStep2() {
+    $('step1').classList.remove('active');
+    $('step2').classList.add('active');
+    $('dot1').classList.remove('active');
+    $('dot1').classList.add('done');
+    $('dot2').classList.add('active');
+
+    /* Ilk kutuya odaklan */
+    setTimeout(() => {
+      const inputs = $('totpContainer').querySelectorAll('input');
+      inputs[0].focus();
+    }, 100);
+  }
+
+  /* TOTP kutularinda oto-gecis */
+  const totpInputs = $('totpContainer').querySelectorAll('input');
+  totpInputs.forEach((inp, i) => {
+    inp.addEventListener('input', e => {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val;
+      if (val && i < 5) totpInputs[i + 1].focus();
+      /* 6 hane dolunca otomatik dogrula */
+      if (getTotpCode().length === 6) doTotp();
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) {
+        totpInputs[i - 1].focus();
+      }
+    });
+    /* Yapistirilinca 6 haneyi dagit */
+    inp.addEventListener('paste', e => {
+      e.preventDefault();
+      const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      paste.split('').forEach((ch, ci) => {
+        if (totpInputs[ci]) totpInputs[ci].value = ch;
+      });
+      if (paste.length === 6) doTotp();
+      else if (paste.length > 0) totpInputs[Math.min(paste.length, 5)].focus();
+    });
+  });
+
+  function getTotpCode() {
+    return Array.from(totpInputs).map(i => i.value).join('');
+  }
+
+  async function doTotp() {
+    const btn = $('btnTotp');
+    const errEl = $('err2');
+    errEl.classList.remove('show');
+
+    const code = getTotpCode();
+    if (code.length !== 6) {
+      showErr(errEl, '6 haneli kodu eksiksiz girin');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Dogrulaniyor...';
+
+    try {
+      const r = await fetch('/auth/verify-totp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+      const d = await r.json();
+
+      if (!r.ok) {
+        showErr(errEl, d.error || 'Gecersiz kod');
+        btn.disabled = false;
+        btn.textContent = 'Dogrula';
+        /* Kutulari temizle */
+        totpInputs.forEach(i => i.value = '');
+        totpInputs[0].focus();
+        return;
+      }
+
+      /* Basarili — dashboard'a yonlendir */
+      window.location.href = '/';
+    } catch (e) {
+      showErr(errEl, 'Sunucu baglantisi kurulamadi');
+      btn.disabled = false;
+      btn.textContent = 'Dogrula';
+    }
+  }
+
+  function showErr(el, msg) {
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+</script>
+</body>
+</html>

@@ -79,9 +79,24 @@ color:var(--dim);cursor:pointer;font-size:.82em;font-weight:600;transition:all .
 .map-info{display:flex;gap:12px;justify-content:center;margin-top:6px;font-size:.72em;color:var(--dim)}
 .map-info .leg{display:flex;align-items:center;gap:4px}
 .map-info .leg i{display:inline-block;width:16px;height:3px;border-radius:2px}
+/* Auth nav */
+.auth-nav{position:fixed;top:8px;right:8px;z-index:100;display:flex;gap:6px}
+.auth-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;
+font-family:-apple-system,system-ui,sans-serif;font-size:.7em;font-weight:600;text-decoration:none;
+border:1px solid var(--border);background:rgba(20,25,36,.92);backdrop-filter:blur(8px);color:var(--dim);transition:all .2s}
+.auth-btn:hover{border-color:var(--primary);color:var(--primary)}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+.admin-btn{color:var(--warning);border-color:rgba(255,179,0,.3)}
+.admin-btn:hover{border-color:var(--warning);color:var(--warning)}
 </style>
 </head>
 <body>
+
+<div class="auth-nav" id="authNav">
+  <a href="/" class="auth-btn" title="Panel">&#127968;</a>
+  <a href="/admin.html" class="auth-btn admin-btn" id="adminBtn" style="display:none">Admin</a>
+  <a href="/auth/logout" class="auth-btn logout-btn">Cikis</a>
+</div>
 
 <div class="header">
   <h1>&#128225; PRIME MIBZER</h1>
@@ -508,6 +523,11 @@ function loadAnalyticsTrail(deviceId) {
 loadDevices();
 /* Cihaz listesini her 60 saniyede guncelle */
 setInterval(loadDevices, 60000);
+
+/* Auth kontrol */
+fetch('/auth/me').then(r=>r.json()).then(d=>{
+  if(d.role==='admin') document.getElementById('adminBtn').style.display='inline-flex';
+}).catch(()=>{});
 </script>
 </body>
 </html>

@@ -345,14 +345,62 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  /* Auth nav */
+  .auth-nav {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+  }
+
+  .auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid var(--border);
+    background: rgba(17,19,24,0.9);
+    backdrop-filter: blur(8px);
+    color: var(--muted);
+  }
+
+  .auth-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  .admin-btn { color: #ff9800; border-color: rgba(255,152,0,0.3); }
+  .admin-btn:hover { border-color: #ff9800; color: #ff9800; }
+
   @media (max-width: 520px) {
     .cards.two-col { grid-template-columns: 1fr; }
     h1 { font-size: 22px; }
+    .auth-nav { top: 10px; right: 10px; }
+    .auth-btn { padding: 5px 10px; font-size: 10px; }
   }
 </style>
 </head>
 <body>
 <div class="wrapper">
+
+  <!-- Auth nav -->
+  <div class="auth-nav" id="authNav">
+    <a href="/admin.html" class="auth-btn admin-btn" id="adminBtn" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      Admin
+    </a>
+    <a href="/auth/logout" class="auth-btn logout-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cikis
+    </a>
+  </div>
 
   <header>
     <div class="logo-row">
@@ -523,6 +571,11 @@
   }
   checkHealth();
   setInterval(checkHealth, 15000);
+
+  /* Auth kontrol — admin butonunu goster/gizle */
+  fetch('/auth/me').then(r=>r.json()).then(d=>{
+    if(d.role==='admin') document.getElementById('adminBtn').style.display='inline-flex';
+  }).catch(()=>{});
 </script>
 </body>
 </html>

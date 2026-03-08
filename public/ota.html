@@ -85,7 +85,9 @@ tr:hover { background:#0d1220; }
   <h1>OTA Firmware Yonetimi</h1>
   <div>
     <a href="/">Dashboard</a> &nbsp;|&nbsp;
-    <a href="/analytics.html">Analitik</a>
+    <a href="/analytics.html">Analitik</a> &nbsp;|&nbsp;
+    <a href="/admin.html" id="adminLink" style="display:none;color:#ffb300">Admin</a>
+    <a href="/auth/logout" style="color:#ff4545">Cikis</a>
   </div>
 </div>
 
@@ -396,6 +398,11 @@ loadDevices();
 loadAssignments();
 setInterval(loadAssignments, 10000);
 setInterval(loadDevices, 30000);
+
+/* Auth kontrol */
+fetch('/auth/me').then(r=>r.json()).then(d=>{
+  if(d.role==='admin') document.getElementById('adminLink').style.display='inline';
+}).catch(()=>{});
 </script>
 
 </body>

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOTP Kurulum — Prime Mibzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00e5a0;
+    --accent2: #0077ff;
+    --text: #e8eaf0;
+    --muted: #4a5068;
+    --danger: #ff4545;
+    --warning: #ff9800;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .setup-box {
+    position: relative;
+    z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 420px;
+    animation: fadeUp 0.5s ease both;
+    text-align: center;
+  }
+
+  .shield-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(0,229,160,0.08);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+
+  .shield-icon svg { width: 32px; height: 32px; color: var(--accent); }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Steps */
+  .instructions {
+    text-align: left;
+    margin-bottom: 24px;
+  }
+
+  .inst-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .inst-num {
+    width: 24px;
+    height: 24px;
+    background: rgba(0,229,160,0.12);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .inst-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    opacity: 0.9;
+  }
+
+  /* QR Code */
+  .qr-wrapper {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    display: inline-block;
+    margin-bottom: 16px;
+  }
+
+  .qr-wrapper img {
+    width: 180px;
+    height: 180px;
+    display: block;
+  }
+
+  /* Secret key */
+  .secret-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 24px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .secret-row:hover { border-color: var(--accent); }
+
+  .secret-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    flex: 1;
+    text-align: left;
+    word-break: break-all;
+  }
+
+  .copy-icon { color: var(--muted); flex-shrink: 0; }
+  .secret-row:hover .copy-icon { color: var(--accent); }
+
+  .secret-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: left;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* TOTP Code Input */
+  .totp-inputs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .totp-inputs input {
+    width: 44px;
+    height: 52px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  .totp-inputs input::-webkit-inner-spin-button,
+  .totp-inputs input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .totp-inputs input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+  }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0c0f;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 4px 20px rgba(0,229,160,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Error / Success */
+  .msg {
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .msg.error {
+    background: rgba(255,69,69,0.1);
+    border: 1px solid rgba(255,69,69,0.2);
+    color: var(--danger);
+  }
+
+  .msg.success {
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.2);
+    color: var(--accent);
+  }
+
+  .msg.show { display: block; }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: #0a0c0f;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  /* Loading state */
+  .loading {
+    padding: 60px 20px;
+  }
+
+  .loading .spinner-lg {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  .loading-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Copy toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--accent);
+    color: #0a0c0f;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    z-index: 100;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+
+  @media (max-width: 440px) {
+    .setup-box { padding: 28px 20px; }
+    .totp-inputs input { width: 38px; height: 46px; font-size: 18px; }
+    .qr-wrapper img { width: 150px; height: 150px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="setup-box">
+  <!-- Yukleniyor durumu -->
+  <div class="loading" id="loadingState">
+    <div class="spinner-lg"></div>
+    <div class="loading-text">QR kod olusturuluyor...</div>
+  </div>
+
+  <!-- Kurulum icerigi -->
+  <div id="setupContent" style="display:none">
+    <div class="shield-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+    </div>
+
+    <h1>2FA <span>Kurulum</span></h1>
+    <div class="subtitle">GOOGLE AUTHENTICATOR</div>
+
+    <div class="instructions">
+      <div class="inst-step">
+        <div class="inst-num">1</div>
+        <div class="inst-text">Google Authenticator uygulamasini acin</div>
+      </div>
+      <div class="inst-step">
+        <div class="inst-num">2</div>
+        <div class="inst-text">Asagidaki QR kodu tarayin veya anahtari manuel girin</div>
+      </div>
+      <div class="inst-step">
+        <div class="inst-num">3</div>
+        <div class="inst-text">Uygulamada gosterilen 6 haneli kodu girin</div>
+      </div>
+    </div>
+
+    <div class="qr-wrapper">
+      <img id="qrImg" alt="QR Kod" src="">
+    </div>
+
+    <div class="secret-label">MANUEL ANAHTAR</div>
+    <div class="secret-row" id="secretRow" onclick="copySecret()">
+      <span class="secret-key" id="secretKey">—</span>
+      <svg class="copy-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="9" y="9" width="13" height="13" rx="2"/>
+        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+      </svg>
+    </div>
+
+    <div class="msg error" id="errMsg"></div>
+    <div class="msg success" id="okMsg"></div>
+
+    <div class="totp-inputs" id="totpContainer">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="0">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="1">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="2">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="3">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="4">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="5">
+    </div>
+
+    <button class="btn btn-primary" id="btnVerify" onclick="doVerify()">Kurulumu Tamamla</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">Kopyalandi!</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  let secretValue = '';
+
+  /* Sayfa yuklenince QR kodu getir */
+  async function loadSetup() {
+    try {
+      const r = await fetch('/auth/totp-setup');
+      const d = await r.json();
+
+      if (!r.ok) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      secretValue = d.secret;
+      $('qrImg').src = d.qr;
+      $('secretKey').textContent = d.secret;
+
+      $('loadingState').style.display = 'none';
+      $('setupContent').style.display = 'block';
+
+      /* Ilk kutuya odaklan */
+      setTimeout(() => {
+        $('totpContainer').querySelectorAll('input')[0].focus();
+      }, 200);
+    } catch (e) {
+      window.location.href = '/login.html';
+    }
+  }
+
+  loadSetup();
+
+  /* Secret kopyala */
+  function copySecret() {
+    if (!secretValue) return;
+    navigator.clipboard.writeText(secretValue).then(() => {
+      const toast = $('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    });
+  }
+
+  /* TOTP kutulari */
+  const totpInputs = $('totpContainer').querySelectorAll('input');
+  totpInputs.forEach((inp, i) => {
+    inp.addEventListener('input', e => {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val;
+      if (val && i < 5) totpInputs[i + 1].focus();
+      if (getTotpCode().length === 6) doVerify();
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) {
+        totpInputs[i - 1].focus();
+      }
+    });
+    inp.addEventListener('paste', e => {
+      e.preventDefault();
+      const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      paste.split('').forEach((ch, ci) => {
+        if (totpInputs[ci]) totpInputs[ci].value = ch;
+      });
+      if (paste.length === 6) doVerify();
+      else if (paste.length > 0) totpInputs[Math.min(paste.length, 5)].focus();
+    });
+  });
+
+  function getTotpCode() {
+    return Array.from(totpInputs).map(i => i.value).join('');
+  }
+
+  /* Dogrulama */
+  async function doVerify() {
+    const btn = $('btnVerify');
+    const errEl = $('errMsg');
+    const okEl = $('okMsg');
+    errEl.classList.remove('show');
+    okEl.classList.remove('show');
+
+    const code = getTotpCode();
+    if (code.length !== 6) {
+      errEl.textContent = '6 haneli kodu eksiksiz girin';
+      errEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Dogrulaniyor...';
+
+    try {
+      const r = await fetch('/auth/setup-totp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+      const d = await r.json();
+
+      if (!r.ok) {
+        errEl.textContent = d.error || 'Gecersiz kod';
+        errEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Kurulumu Tamamla';
+        totpInputs.forEach(i => i.value = '');
+        totpInputs[0].focus();
+        return;
+      }
+
+      /* Basarili */
+      okEl.textContent = '2FA basariyla kuruldu! Yonlendiriliyorsunuz...';
+      okEl.classList.add('show');
+      btn.disabled = true;
+      btn.textContent = 'Tamamlandi';
+
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
+    } catch (e) {
+      errEl.textContent = 'Sunucu baglantisi kurulamadi';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Kurulumu Tamamla';
+    }
+  }
+</script>
+</body>
+</html>

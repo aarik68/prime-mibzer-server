@@ -71,9 +71,24 @@ background:var(--border);color:var(--dim);cursor:pointer;border:none;white-space
 .trail-btn{padding:4px 12px;border-radius:14px;font-size:.72em;font-weight:600;
 background:var(--border);color:var(--dim);cursor:pointer;border:none}
 .trail-btn.active{background:var(--primary);color:#fff}
+/* Auth nav */
+.auth-nav{position:fixed;top:8px;right:8px;z-index:100;display:flex;gap:6px}
+.auth-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;
+font-family:-apple-system,system-ui,sans-serif;font-size:.7em;font-weight:600;text-decoration:none;
+border:1px solid var(--border);background:rgba(20,25,36,.92);backdrop-filter:blur(8px);color:var(--dim);transition:all .2s}
+.auth-btn:hover{border-color:var(--primary);color:var(--primary)}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+.admin-btn{color:var(--warning);border-color:rgba(255,179,0,.3)}
+.admin-btn:hover{border-color:var(--warning);color:var(--warning)}
 </style>
 </head>
 <body>
+
+<div class="auth-nav" id="authNav">
+  <a href="/" class="auth-btn" title="Panel">&#127968;</a>
+  <a href="/admin.html" class="auth-btn admin-btn" id="adminBtn" style="display:none">Admin</a>
+  <a href="/auth/logout" class="auth-btn logout-btn">Cikis</a>
+</div>
 
 <h1>&#9881; PRIME MIBZER</h1>
 <div class="status">
@@ -572,6 +587,11 @@ fetchLatest();
 fetchHealth();
 setInterval(fetchLatest, 2000);
 setInterval(fetchHealth, 30000);
+
+/* Auth kontrol */
+fetch('/auth/me').then(r=>r.json()).then(d=>{
+  if(d.role==='admin') document.getElementById('adminBtn').style.display='inline-flex';
+}).catch(()=>{});
 </script>
 <div style="text-align:center;padding:12px 0 8px;border-top:1px solid var(--border);margin-top:12px">
   <a href="/analytics.html" style="color:var(--primary);font-size:.8em;text-decoration:none;font-weight:600">&#128225; Cihaz Yonetim Paneli &rarr;</a>
