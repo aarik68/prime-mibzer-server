@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0B0E17">
+<title>Prime Mibzer — Cihaz Yonetimi</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0B0E17;--card:#141924;--card2:#1A2234;--border:#1E2A3A;--primary:#00B4FF;
+--success:#00E676;--warning:#FFB300;--danger:#FF1744;--text:#FFF;--dim:#7A8BA0;--spacing:#55EFC4}
+body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);
+padding:12px;max-width:700px;margin:0 auto;min-height:100vh}
+
+/* Baslik */
+.header{text-align:center;padding:12px 0 8px}
+.header h1{color:var(--primary);font-size:1.3em;letter-spacing:1px}
+.header .sub{color:var(--dim);font-size:.75em;margin-top:2px}
+
+/* Cihaz butonlari */
+.devices{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 16px}
+.dev-btn{padding:10px 16px;border-radius:10px;border:2px solid var(--border);background:var(--card);
+color:var(--dim);cursor:pointer;font-size:.82em;font-weight:600;transition:all .2s;min-width:120px;text-align:center}
+.dev-btn:hover{border-color:var(--primary);color:var(--text)}
+.dev-btn.active{border-color:var(--primary);background:rgba(0,180,255,.12);color:var(--primary);box-shadow:0 0 12px rgba(0,180,255,.15)}
+.dev-btn .id{font-size:1.1em;font-weight:800;display:block}
+.dev-btn .info{font-size:.7em;color:var(--dim);margin-top:3px;font-weight:400}
+.dev-btn .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+.dev-btn .dot.online{background:var(--success);box-shadow:0 0 6px var(--success)}
+.dev-btn .dot.offline{background:var(--danger)}
+.no-dev{text-align:center;color:var(--dim);padding:40px 20px;font-size:.9em}
+
+/* Son guncelleme */
+.last-seen{text-align:center;font-size:.78em;color:var(--dim);margin-bottom:12px}
+.last-seen .t{color:var(--primary);font-weight:700}
+
+/* Kart grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+@media(max-width:400px){.grid{grid-template-columns:1fr}}
+
+/* Kart */
+.card{background:var(--card);border-radius:10px;padding:12px 14px;border:1px solid var(--border)}
+.card.full{grid-column:1/-1}
+.card h2{color:var(--primary);font-size:.78em;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase}
+.row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:.82em}
+.row .k{color:var(--dim)}.row .v{font-weight:600;text-align:right}
+
+/* Buyuk deger */
+.big-val{text-align:center;padding:6px 0}
+.big-val .num{font-size:2em;font-weight:800;line-height:1.1}
+.big-val .lbl{font-size:.68em;color:var(--dim);margin-top:2px;text-transform:uppercase}
+
+/* Durum noktasi */
+.dot-i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.dot-i.g{background:var(--success)}.dot-i.r{background:var(--danger)}.dot-i.y{background:var(--warning)}
+
+/* Bar */
+.bar-h{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:4px}
+.bar-h .fill{height:100%;border-radius:3px;transition:width .5s}
+
+/* Footer */
+.footer{text-align:center;color:var(--dim);font-size:.68em;padding:16px 0 8px;border-top:1px solid var(--border);margin-top:16px}
+.footer a{color:var(--primary);text-decoration:none}
+
+/* Bos durum */
+.empty-state{text-align:center;padding:60px 20px;color:var(--dim)}
+.empty-state .icon{font-size:3em;margin-bottom:12px}
+.empty-state p{font-size:.9em;line-height:1.5}
+
+/* Gecmis tablosu */
+.history-tbl{width:100%;border-collapse:collapse;font-size:.75em;margin-top:8px}
+.history-tbl th{color:var(--dim);text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);font-weight:600}
+.history-tbl td{padding:4px 6px;border-bottom:1px solid rgba(30,42,58,.4)}
+.history-tbl tr:hover td{background:rgba(0,180,255,.04)}
+/* Harita */
+.map-box{height:320px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.map-info{display:flex;gap:12px;justify-content:center;margin-top:6px;font-size:.72em;color:var(--dim)}
+.map-info .leg{display:flex;align-items:center;gap:4px}
+.map-info .leg i{display:inline-block;width:16px;height:3px;border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>&#128225; PRIME MIBZER</h1>
+  <div class="sub">Cihaz Yonetim Paneli</div>
+</div>
+
+<!-- Cihaz butonlari -->
+<div class="devices" id="dev-list">
+  <div class="no-dev">Cihaz listesi yukleniyor...</div>
+</div>
+
+<!-- Icerik alani -->
+<div id="content">
+  <div class="empty-state">
+    <div class="icon">&#128225;</div>
+    <p>Yukaridaki butonlardan bir cihaz secin</p>
+  </div>
+</div>
+
+<!-- Gecmis kayitlar -->
+<div id="history-section" style="display:none">
+  <div class="card full" style="margin-top:8px">
+    <h2>&#128203; Son 20 Analitik Kaydi</h2>
+    <div style="overflow-x:auto">
+      <table class="history-tbl" id="history-tbl">
+        <thead><tr>
+          <th>Zaman</th><th>Uptime</th><th>Boot</th><th>Tohum</th><th>Alan</th><th>CPU</th><th>Heap</th><th>RSSI</th>
+        </tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <a href="/">&#8592; Canli Dashboard</a> &nbsp;|&nbsp; Prime Mibzer v2.0
+</div>
+
+<script>
+/* ============================================================================
+ *                           DEGISKENLER
+ * ============================================================================ */
+var devices = [];
+var selectedDevice = null;
+var refreshTimer = null;
+
+/* ============================================================================
+ *                           YARDIMCI FONKSIYONLAR
+ * ============================================================================ */
+function el(id) { return document.getElementById(id); }
+function fmt(v, d) { return v != null ? Number(v).toFixed(d) : '--'; }
+
+/** @brief Uptime (ms) -> okunabilir format */
+function uptimeStr(ms) {
+  if (!ms) return '--';
+  var s = Math.floor(ms / 1000);
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  if (h > 0) return h + ' saat ' + m + ' dk';
+  return m + ' dk ' + (s % 60) + ' sn';
+}
+
+/** @brief Tarih -> okunabilir zaman */
+function timeAgo(ts) {
+  if (!ts) return '--';
+  var d = new Date(ts + 'Z');
+  var sec = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (sec < 5) return 'simdi';
+  if (sec < 60) return sec + ' sn once';
+  if (sec < 3600) return Math.floor(sec / 60) + ' dk once';
+  if (sec < 86400) return Math.floor(sec / 3600) + ' saat once';
+  return Math.floor(sec / 86400) + ' gun once';
+}
+
+/** @brief Tarih -> kisa format */
+function shortTime(ts) {
+  if (!ts) return '--';
+  var d = new Date(ts + 'Z');
+  return d.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+}
+
+/** @brief RSSI -> sinyal kalitesi */
+function rssiQuality(rssi) {
+  if (!rssi || rssi === 0) return {text: 'Yok', color: 'var(--dim)', pct: 0};
+  if (rssi > -50) return {text: 'Mukemmel', color: 'var(--success)', pct: 100};
+  if (rssi > -60) return {text: 'Cok Iyi', color: 'var(--success)', pct: 80};
+  if (rssi > -70) return {text: 'Iyi', color: 'var(--spacing)', pct: 60};
+  if (rssi > -80) return {text: 'Orta', color: 'var(--warning)', pct: 40};
+  return {text: 'Zayif', color: 'var(--danger)', pct: 20};
+}
+
+/* ============================================================================
+ *                           CIHAZ LISTESI
+ * ============================================================================ */
+
+/** @brief Cihaz listesini yukle ve butonlari olustur */
+function loadDevices() {
+  fetch('/api/devices').then(function(r) { return r.json(); }).then(function(list) {
+    devices = list;
+    var container = el('dev-list');
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div class="no-dev">Henuz kayitli cihaz yok.<br>Cihaz WiFi\'ye baglaninca burada gorunecek.</div>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+      var d = list[i];
+      var ago = timeAgo(d.last_seen);
+      /* 10 dakikadan yeni ise online */
+      var lastDate = new Date(d.last_seen + 'Z');
+      var isOnline = (Date.now() - lastDate.getTime()) < 600000;
+      var dotClass = isOnline ? 'online' : 'offline';
+      var sel = (selectedDevice === d.device_id) ? ' active' : '';
+
+      html += '<button class="dev-btn' + sel + '" onclick="selectDevice(\'' + d.device_id + '\')">'
+            + '<span class="id"><span class="dot ' + dotClass + '"></span>' + d.device_id + '</span>'
+            + '<span class="info">FW ' + (d.fw_version || '?') + ' | ' + ago + '</span>'
+            + '</button>';
+    }
+    container.innerHTML = html;
+
+    /* Ilk cihazi otomatik sec (eger henuz secilmemisse) */
+    if (!selectedDevice && list.length > 0) {
+      selectDevice(list[0].device_id);
+    }
+  }).catch(function() {
+    el('dev-list').innerHTML = '<div class="no-dev">Sunucuya ulasilamiyor</div>';
+  });
+}
+
+/* ============================================================================
+ *                           CIHAZ SECIMI
+ * ============================================================================ */
+
+/** @brief Cihaz sec ve verilerini yukle */
+function selectDevice(deviceId) {
+  selectedDevice = deviceId;
+
+  /* Buton aktifligini guncelle */
+  var btns = document.querySelectorAll('.dev-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.remove('active');
+    if (btns[i].textContent.indexOf(deviceId) >= 0) {
+      btns[i].classList.add('active');
+    }
+  }
+
+  /* Veri yukle */
+  loadAnalytics(deviceId);
+  loadHistory(deviceId);
+
+  /* Otomatik yenileme */
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(function() {
+    loadAnalytics(deviceId);
+    loadHistory(deviceId);
+  }, 30000);
+}
+
+/* ============================================================================
+ *                           ANALITIK VERI GOSTERIMI
+ * ============================================================================ */
+
+/** @brief Secili cihazin son analitik verisini yukle */
+function loadAnalytics(deviceId) {
+  fetch('/api/analytics/latest?device_id=' + encodeURIComponent(deviceId))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d || d.empty) {
+        el('content').innerHTML = '<div class="empty-state"><div class="icon">&#128268;</div>'
+          + '<p><b>' + deviceId + '</b> icin henuz analitik verisi yok.<br>'
+          + 'Cihaz WiFi\'ye baglaninca otomatik gelecek.</p></div>';
+        el('history-section').style.display = 'none';
+        return;
+      }
+      renderAnalytics(d);
+    })
+    .catch(function() {
+      el('content').innerHTML = '<div class="empty-state"><div class="icon">&#9888;</div>'
+        + '<p>Veri yuklenirken hata olustu</p></div>';
+    });
+}
+
+/** @brief Analitik verisini kartlara render et */
+function renderAnalytics(d) {
+  var wifi = rssiQuality(d.wifi_rssi);
+  var lastSeen = timeAgo(d.ts);
+  var lastDate = new Date(d.ts + 'Z');
+  var isOnline = (Date.now() - lastDate.getTime()) < 600000;
+  var statusDot = isOnline ? '<span class="dot-i g"></span>Cevrimici' : '<span class="dot-i r"></span>Cevrimdisi';
+
+  var html = '';
+
+  /* Son guncelleme */
+  html += '<div class="last-seen">Son rapor: <span class="t">' + lastSeen + '</span> &mdash; ' + statusDot + '</div>';
+
+  /* Grid baslat */
+  html += '<div class="grid">';
+
+  /* -- CIHAZ BILGISI -- */
+  html += '<div class="card">'
+    + '<h2>&#128225; Cihaz</h2>'
+    + '<div class="row"><span class="k">ID</span><span class="v">' + (d.device_id || '--') + '</span></div>'
+    + '<div class="row"><span class="k">Firmware</span><span class="v">v' + (d.fw_version || '?') + '</span></div>'
+    + '<div class="row"><span class="k">Boot Sayisi</span><span class="v">' + (d.boot_count || 0) + '</span></div>'
+    + '<div class="row"><span class="k">Uptime</span><span class="v">' + uptimeStr(d.uptime_ms) + '</span></div>'
+    + '</div>';
+
+  /* -- STM32 BAGLANTI -- */
+  var linkHtml = d.link_active
+    ? '<span class="dot-i g"></span>AKTIF'
+    : '<span class="dot-i r"></span>KOPUK';
+  html += '<div class="card">'
+    + '<h2>&#128268; Baglanti</h2>'
+    + '<div class="row"><span class="k">STM32</span><span class="v">' + linkHtml + '</span></div>'
+    + '<div class="row"><span class="k">Telemetri</span><span class="v">' + (d.tele_enabled ? '<span class="dot-i g"></span>ACIK' : '<span class="dot-i y"></span>KAPALI') + '</span></div>'
+    + '<div class="row"><span class="k">Gonderim</span><span class="v" style="color:var(--success)">' + (d.tele_sent || 0) + '</span></div>'
+    + '<div class="row"><span class="k">Basarisiz</span><span class="v" style="color:' + ((d.tele_fail || 0) > 0 ? 'var(--danger)' : 'var(--dim)') + '">' + (d.tele_fail || 0) + '</span></div>'
+    + '</div>';
+
+  /* -- EKIM OZET -- */
+  html += '<div class="card">'
+    + '<h2>&#127793; Ekim</h2>'
+    + '<div class="row"><span class="k">Toplam Tohum</span><span class="v" style="color:var(--spacing)">' + (d.total_seeds || 0) + '</span></div>'
+    + '<div class="row"><span class="k">Alan</span><span class="v">' + fmt(d.area_ha, 2) + ' ha</span></div>'
+    + '<div class="row"><span class="k">Mesafe</span><span class="v">' + fmt(d.distance_m, 0) + ' m</span></div>'
+    + '<div class="row"><span class="k">Durum</span><span class="v">' + seedingState(d.seeding_state) + '</span></div>'
+    + '</div>';
+
+  /* -- WIFI -- */
+  html += '<div class="card">'
+    + '<h2>&#128246; WiFi</h2>'
+    + '<div class="row"><span class="k">SSID</span><span class="v">' + (d.wifi_ssid || '--') + '</span></div>'
+    + '<div class="row"><span class="k">RSSI</span><span class="v" style="color:' + wifi.color + '">' + (d.wifi_rssi || 0) + ' dBm</span></div>'
+    + '<div class="row"><span class="k">Kalite</span><span class="v" style="color:' + wifi.color + '">' + wifi.text + '</span></div>'
+    + '<div class="bar-h"><div class="fill" style="width:' + wifi.pct + '%;background:' + wifi.color + '"></div></div>'
+    + '</div>';
+
+  /* -- SISTEM SAGLIGI -- */
+  var heapMB = d.free_heap ? (d.free_heap / 1024).toFixed(0) : '--';
+  var cpuColor = (d.cpu_load || 0) > 80 ? 'var(--danger)' : (d.cpu_load || 0) > 50 ? 'var(--warning)' : 'var(--success)';
+  html += '<div class="card">'
+    + '<h2>&#9881; Sistem</h2>'
+    + '<div class="row"><span class="k">CPU</span><span class="v" style="color:' + cpuColor + '">%' + (d.cpu_load || 0) + '</span></div>'
+    + '<div class="bar-h"><div class="fill" style="width:' + (d.cpu_load || 0) + '%;background:' + cpuColor + '"></div></div>'
+    + '<div class="row" style="margin-top:4px"><span class="k">Bos Heap</span><span class="v">' + heapMB + ' KB</span></div>'
+    + '</div>';
+
+  /* -- ALARM -- */
+  var almColor = (d.alarm_count || 0) > 0 ? 'var(--danger)' : 'var(--success)';
+  html += '<div class="card">'
+    + '<h2>&#128680; Alarm</h2>'
+    + '<div class="row"><span class="k">Aktif Alarm</span><span class="v" style="color:' + almColor + '">' + (d.alarm_count || 0) + '</span></div>'
+    + '<div class="row"><span class="k">En Yuksek</span><span class="v">' + (d.alarm_highest || 0) + '</span></div>'
+    + '</div>';
+
+  /* -- GPS -- */
+  var gpsValid = d.gps_valid;
+  var posText = gpsValid ? fmt(d.lat, 4) + ', ' + fmt(d.lon, 4) : 'Gecersiz';
+  html += '<div class="card full">'
+    + '<h2>&#127757; Makine Konumu</h2>'
+    + '<div class="row"><span class="k">Konum</span><span class="v">' + posText + '</span></div>'
+    + '<div class="row"><span class="k">Gecerli</span><span class="v">' + (gpsValid ? '<span class="dot-i g"></span>Evet' : '<span class="dot-i r"></span>Hayir') + '</span></div>'
+    + '<div class="map-box" id="ana-map"></div>'
+    + '<div class="map-info">'
+    + '<span class="leg"><i style="background:#00B4FF"></i> Guzergah</span>'
+    + '<span class="leg"><i style="background:#FF1744;width:8px;height:8px;border-radius:50%"></i> Son konum</span>'
+    + '</div>';
+
+  if (gpsValid && d.lat && d.lon) {
+    html += '<div style="text-align:center;margin-top:6px">'
+      + '<a href="https://maps.google.com/?q=' + d.lat + ',' + d.lon + '" target="_blank" '
+      + 'style="color:var(--primary);font-size:.8em;text-decoration:none">'
+      + '&#127757; Google Maps\'te Ac</a></div>';
+  }
+  html += '</div>';
+
+  /* Grid kapat */
+  html += '</div>';
+
+  el('content').innerHTML = html;
+  el('history-section').style.display = 'block';
+
+  /* Haritayi baslat */
+  setTimeout(function() { initAnalyticsMap(d); }, 100);
+}
+
+/** @brief Ekim durumu kodu -> metin */
+function seedingState(s) {
+  var states = ['HAZIR', 'EKIM', 'DURAKLADI', 'KALIBRASYON', 'HATA'];
+  return states[s] || 'BILINMIYOR';
+}
+
+/* ============================================================================
+ *                           GECMIS KAYITLAR
+ * ============================================================================ */
+
+/** @brief Son 20 analitik kaydini tablo olarak goster */
+function loadHistory(deviceId) {
+  fetch('/api/analytics/history?device_id=' + encodeURIComponent(deviceId) + '&limit=20')
+    .then(function(r) { return r.json(); })
+    .then(function(rows) {
+      var tbody = el('history-body');
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--dim)">Kayit yok</td></tr>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        html += '<tr>'
+          + '<td>' + shortTime(r.ts) + '</td>'
+          + '<td>' + uptimeStr(r.uptime_ms) + '</td>'
+          + '<td>' + (r.boot_count || 0) + '</td>'
+          + '<td>' + (r.total_seeds || 0) + '</td>'
+          + '<td>' + fmt(r.area_ha, 2) + '</td>'
+          + '<td>%' + (r.cpu_load || 0) + '</td>'
+          + '<td>' + (r.free_heap ? (r.free_heap / 1024).toFixed(0) + 'K' : '--') + '</td>'
+          + '<td>' + (r.wifi_rssi || 0) + '</td>'
+          + '</tr>';
+      }
+      tbody.innerHTML = html;
+    })
+    .catch(function() {
+      el('history-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--dim)">Yuklenemedi</td></tr>';
+    });
+}
+
+/* ============================================================================
+ *                           HARITA (Leaflet)
+ * ============================================================================ */
+var anaMap = null;
+var anaMarker = null;
+var anaTrail = null;
+
+/** @brief Analitik haritasini baslat */
+function initAnalyticsMap(d) {
+  var mapDiv = document.getElementById('ana-map');
+  if (!mapDiv) return;
+
+  /* Eski haritayi temizle */
+  if (anaMap) { anaMap.remove(); anaMap = null; anaMarker = null; anaTrail = null; }
+
+  var startLat = (d.gps_valid && d.lat) ? d.lat : 39.9;
+  var startLon = (d.gps_valid && d.lon) ? d.lon : 32.8;
+  var startZoom = (d.gps_valid && d.lat) ? 14 : 6;
+
+  anaMap = L.map('ana-map', {
+    zoomControl: true,
+    attributionControl: false
+  }).setView([startLat, startLon], startZoom);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+  }).addTo(anaMap);
+
+  /* Son konum marker */
+  if (d.gps_valid && d.lat && d.lon) {
+    anaMarker = L.circleMarker([d.lat, d.lon], {
+      radius: 8, fillColor: '#FF1744', color: '#fff', weight: 2,
+      fillOpacity: 1
+    }).addTo(anaMap).bindPopup('<b>' + (d.device_id || '?') + '</b><br>Son konum');
+  }
+
+  /* Guzergah verisi yukle */
+  loadAnalyticsTrail(d.device_id);
+}
+
+/** @brief Analitik GPS guzergahini yukle */
+function loadAnalyticsTrail(deviceId) {
+  if (!anaMap) return;
+
+  fetch('/api/analytics/trail?device_id=' + encodeURIComponent(deviceId) + '&limit=200')
+    .then(function(r) { return r.json(); })
+    .then(function(points) {
+      if (!points || points.length === 0) return;
+
+      var latlngs = [];
+      for (var i = 0; i < points.length; i++) {
+        if (points[i].lat && points[i].lon) {
+          latlngs.push([points[i].lat, points[i].lon]);
+        }
+      }
+      if (latlngs.length < 2) return;
+
+      if (anaTrail) { anaMap.removeLayer(anaTrail); }
+      anaTrail = L.polyline(latlngs, {
+        color: '#00B4FF', weight: 3, opacity: 0.8
+      }).addTo(anaMap);
+
+      anaMap.fitBounds(anaTrail.getBounds().pad(0.15));
+    })
+    .catch(function() {});
+
+  /* Telemetri trail'i de yukle (daha detayli) */
+  fetch('/api/trail?device_id=' + encodeURIComponent(deviceId) + '&period=-1 day&limit=1000')
+    .then(function(r) { return r.json(); })
+    .then(function(points) {
+      if (!points || points.length < 2) return;
+
+      var latlngs = [];
+      for (var i = 0; i < points.length; i++) {
+        if (points[i].lat && points[i].lon) {
+          latlngs.push([points[i].lat, points[i].lon]);
+        }
+      }
+      if (latlngs.length < 2) return;
+
+      /* Telemetri trail (daha ince, farkli renk) */
+      var telTrail = L.polyline(latlngs, {
+        color: '#55EFC4', weight: 2, opacity: 0.6
+      }).addTo(anaMap);
+
+      anaMap.fitBounds(telTrail.getBounds().pad(0.15));
+    })
+    .catch(function() {});
+}
+
+/* ============================================================================
+ *                           BASLANGIC
+ * ============================================================================ */
+loadDevices();
+/* Cihaz listesini her 60 saniyede guncelle */
+setInterval(loadDevices, 60000);
+</script>
+</body>
+</html>

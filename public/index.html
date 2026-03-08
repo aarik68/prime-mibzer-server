@@ -2,391 +2,527 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0B0E17">
-<title>Prime Mibzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akilli Mibzer — Cloud Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0B0E17;--card:#141924;--border:#1E2A3A;--primary:#00B4FF;--success:#00E676;
---warning:#FFB300;--danger:#FF1744;--text:#FFF;--dim:#7A8BA0;--spacing:#55EFC4}
-body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);
-padding:8px;max-width:480px;margin:0 auto;-webkit-font-smoothing:antialiased;min-height:100vh}
-h1{color:var(--primary);text-align:center;font-size:1.2em;padding:10px 0 6px;letter-spacing:1px}
-.status{text-align:center;font-size:.75em;color:var(--dim);padding:2px 0 8px}
-.status .on{color:var(--success)}.status .off{color:var(--danger)}
-/* Buyuk gostergeler */
-.hero{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.hero .card{text-align:center;padding:12px 8px}
-.hero .val{font-size:2.2em;font-weight:800;line-height:1.1}
-.hero .lbl{font-size:.7em;color:var(--dim);margin-top:2px;text-transform:uppercase}
-/* Kartlar */
-.card{background:var(--card);border-radius:10px;padding:10px 12px;margin-bottom:8px;
-border:1px solid var(--border)}
-.card h2{color:var(--primary);font-size:.85em;margin-bottom:6px;letter-spacing:.5px}
-.row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:.85em}
-.row .k{color:var(--dim)}.row .v{font-weight:600;text-align:right}
-/* Durum noktasi */
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
-.dot.g{background:var(--success)}.dot.r{background:var(--danger)}.dot.y{background:var(--warning)}
-/* Mini grafik */
-.chart-wrap{height:80px;position:relative;margin:6px 0}
-canvas{width:100%;height:100%;display:block}
-/* Sekmeler */
-.tabs{display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.tab{flex:0 0 auto;padding:6px 14px;border-radius:20px;font-size:.78em;font-weight:600;
-background:var(--border);color:var(--dim);cursor:pointer;border:none;white-space:nowrap}
-.tab.active{background:var(--primary);color:#fff}
-/* Ekim bar */
-.bar-wrap{display:flex;align-items:center;gap:6px;padding:2px 0}
-.bar{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
-.bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
-.bar-val{font-size:.8em;font-weight:700;min-width:42px;text-align:right}
-/* Refresh indicator */
-.pulse{animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00e5a0;
+    --accent2: #0077ff;
+    --text: #e8eaf0;
+    --muted: #4a5068;
+    --danger: #ff4545;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orb */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 760px;
+  }
+
+  header {
+    margin-bottom: 48px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-icon svg { width: 20px; height: 20px; }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .ip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .ip-badge:hover { border-color: var(--accent); color: var(--accent); }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  /* Section label */
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    margin-top: 36px;
+    padding-left: 2px;
+  }
+
+  .section-label:first-of-type { margin-top: 0; }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    gap: 12px;
+  }
+
+  .cards.two-col { grid-template-columns: 1fr 1fr; }
+  .cards.one-col { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,229,160,0.04) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,229,160,0.08);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card:active { transform: translateY(0); }
+
+  .card.blue:hover {
+    border-color: var(--accent2);
+    box-shadow: 0 8px 32px rgba(0,119,255,0.1);
+  }
+
+  .card.blue::before {
+    background: linear-gradient(135deg, rgba(0,119,255,0.04) 0%, transparent 60%);
+  }
+
+  .card.blue .card-icon { background: rgba(0,119,255,0.12); color: var(--accent2); }
+  .card.blue .card-arrow { color: var(--accent2); }
+
+  .card-icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(0,229,160,0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--accent);
+    transition: background 0.2s;
+  }
+
+  .card-icon svg { width: 22px; height: 22px; }
+
+  .card-body { flex: 1; min-width: 0; }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-arrow {
+    color: var(--muted);
+    transition: color 0.2s, transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  .card:hover .card-arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  .card.blue:hover .card-arrow { color: var(--accent2); }
+
+  /* Monitor card special — orange accent */
+  .card.monitor:hover {
+    border-color: #ff9800;
+    box-shadow: 0 8px 32px rgba(255,152,0,0.12);
+  }
+
+  .card.monitor::before {
+    background: linear-gradient(135deg, rgba(255,152,0,0.04) 0%, transparent 60%);
+  }
+
+  .card.monitor .card-icon { background: rgba(255,152,0,0.12); color: #ff9800; }
+  .card.monitor:hover .card-arrow { color: #ff9800; }
+
+  /* DO card special */
+  .card.do-card {
+    background: linear-gradient(135deg, #0d1117 0%, #0a1628 100%);
+  }
+
+  .card.do-card .card-icon {
+    background: rgba(0, 100, 255, 0.15);
+    color: #4d9fff;
+  }
+
+  .card.do-card:hover {
+    border-color: #4d9fff;
+    box-shadow: 0 8px 32px rgba(0,100,255,0.12);
+  }
+
+  .card.do-card:hover .card-arrow { color: #4d9fff; }
+
+  /* Animation delays */
+  .card:nth-child(1) { animation-delay: 0.1s; }
+  .card:nth-child(2) { animation-delay: 0.15s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+
+  /* Status footer */
+  footer {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    animation: fadeUp 0.5s 0.4s ease both;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .status-dot.offline {
+    background: var(--danger);
+    box-shadow: 0 0 8px var(--danger);
+  }
+
+  .ts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 520px) {
+    .cards.two-col { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
 </style>
 </head>
 <body>
+<div class="wrapper">
 
-<h1>&#9881; PRIME MIBZER</h1>
-<div class="status">
-  <span id="conn" class="off">&#9679; Baglanti bekleniyor...</span>
-  <span id="ago" style="margin-left:8px"></span>
-</div>
-
-<!-- Buyuk gostergeler -->
-<div class="hero">
-  <div class="card">
-    <div class="val" style="color:var(--primary)" id="spd">--</div>
-    <div class="lbl">km/h</div>
-  </div>
-  <div class="card">
-    <div class="val" style="color:var(--spacing)" id="spc">--</div>
-    <div class="lbl">cm aralik</div>
-  </div>
-</div>
-
-<!-- Sekmeler -->
-<div class="tabs">
-  <button class="tab active" onclick="showTab('main')">Ana</button>
-  <button class="tab" onclick="showTab('seeding')">Ekim</button>
-  <button class="tab" onclick="showTab('gps')">GPS</button>
-  <button class="tab" onclick="showTab('sensors')">Sensor</button>
-  <button class="tab" onclick="showTab('system')">Sistem</button>
-  <button class="tab" onclick="showTab('chart')">Grafik</button>
-</div>
-
-<!-- ANA -->
-<div id="p-main" class="page">
-  <div class="card">
-    <h2>&#128640; DURUM</h2>
-    <div class="row"><span class="k">STM32 Baglanti</span><span class="v" id="lnk">--</span></div>
-    <div class="row"><span class="k">Guven</span><span class="v" id="cnf">--</span></div>
-    <div class="row"><span class="k">Motor</span><span class="v" id="mtr">--</span></div>
-    <div class="row"><span class="k">Alarm</span><span class="v" id="alm">--</span></div>
-  </div>
-  <div class="card">
-    <h2>&#127793; EKIM OZET</h2>
-    <div class="row"><span class="k">Toplam Tohum</span><span class="v" id="sd">--</span></div>
-    <div class="row"><span class="k">Alan</span><span class="v" id="ah">--</span></div>
-    <div class="row"><span class="k">Mesafe</span><span class="v" id="dm">--</span></div>
-  </div>
-</div>
-
-<!-- EKIM -->
-<div id="p-seeding" class="page" style="display:none">
-  <div class="card">
-    <h2>&#127793; EKIM DETAY</h2>
-    <div class="row"><span class="k">Toplam Tohum</span><span class="v" id="sd2">--</span></div>
-    <div class="row"><span class="k">Alan (ha)</span><span class="v" id="ah2">--</span></div>
-    <div class="row"><span class="k">Mesafe (m)</span><span class="v" id="dm2">--</span></div>
-    <div class="row"><span class="k">Hedef Aralik</span><span class="v" id="tgt">--</span></div>
-  </div>
-  <div class="card">
-    <h2>&#127919; PERFORMANS</h2>
-    <div class="bar-wrap">
-      <span class="k" style="min-width:60px">Tekli</span>
-      <div class="bar"><div class="bar-fill" id="bf-sg" style="width:0;background:var(--success)"></div></div>
-      <span class="bar-val" id="sg">--%</span>
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0a0c0f" stroke-width="2.5" stroke-linecap="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <h1>Akilli <span>Mibzer</span></h1>
     </div>
-    <div class="bar-wrap">
-      <span class="k" style="min-width:60px">Bosluk</span>
-      <div class="bar"><div class="bar-fill" id="bf-ms" style="width:0;background:var(--warning)"></div></div>
-      <span class="bar-val" id="ms">--%</span>
+    <div class="subtitle">CLOUD CONTROL PANEL &middot; v1.0</div>
+    <div class="ip-badge" onclick="navigator.clipboard.writeText('167.71.36.140')" title="Kopyala">
+      <span class="dot"></span>
+      167.71.36.140
     </div>
-    <div class="bar-wrap">
-      <span class="k" style="min-width:60px">Cift</span>
-      <div class="bar"><div class="bar-fill" id="bf-db" style="width:0;background:var(--danger)"></div></div>
-      <span class="bar-val" id="db">--%</span>
+  </header>
+
+  <!-- Canli Izleme -->
+  <div class="section-label">Canli Izleme</div>
+  <div class="cards one-col">
+
+    <a class="card monitor" href="/monitor.html" target="_blank">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Canli Telemetri</div>
+        <div class="card-desc">Hiz, aralik, GPS, motor — gercek zamanli</div>
+      </div>
+      <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+
+  </div>
+
+  <!-- API -->
+  <div class="section-label">API & Cihazlar</div>
+  <div class="cards two-col">
+
+    <a class="card" href="/api" target="_blank">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+          <path d="M7 8l3 3-3 3M13 14h4"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">API Girisi</div>
+        <div class="card-desc">/api</div>
+      </div>
+      <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+
+    <a class="card" href="/api/devices" target="_blank">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <path d="M12 18h.01"/>
+          <path d="M8 6h8M8 10h8M8 14h4"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Cihaz Listesi</div>
+        <div class="card-desc">/api/devices</div>
+      </div>
+      <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+
+  </div>
+
+  <!-- Dashboards -->
+  <div class="section-label">Paneller</div>
+  <div class="cards two-col">
+
+    <a class="card" href="/analytics.html" target="_blank">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 3v18h18"/>
+          <path d="M18 9l-5 5-4-4-3 3"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Analitik</div>
+        <div class="card-desc">analytics.html</div>
+      </div>
+      <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+
+    <a class="card" href="/ota.html" target="_blank">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <polyline points="16 16 12 12 8 16"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">OTA Dashboard</div>
+        <div class="card-desc">ota.html</div>
+      </div>
+      <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+
+  </div>
+
+  <!-- DigitalOcean -->
+  <div class="section-label">Altyapi</div>
+  <div class="cards one-col">
+
+    <a class="card do-card" href="https://cloud.digitalocean.com/droplets?i=1f6f89" target="_blank">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-12.5c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5V18c-3.31 0-6-2.69-6-6s2.69-6 6-6v1.5zm3 4.5h-1.5v1.5H12v-1.5H10.5V12H12v-1.5h1.5V12H15v1.5z"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">DigitalOcean Droplet</div>
+        <div class="card-desc">cloud.digitalocean.com</div>
+      </div>
+      <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+
+  </div>
+
+  <footer>
+    <div class="status-row">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Kontrol ediliyor...</span>
     </div>
-  </div>
-</div>
+    <div class="ts" id="ts"></div>
+  </footer>
 
-<!-- GPS -->
-<div id="p-gps" class="page" style="display:none">
-  <div class="card">
-    <h2>&#128225; GPS</h2>
-    <div class="row"><span class="k">Konum</span><span class="v" id="pos">--</span></div>
-    <div class="row"><span class="k">Uydu</span><span class="v" id="sat">--</span></div>
-    <div class="row"><span class="k">GPS Hiz</span><span class="v" id="gspd">--</span></div>
-    <div class="row"><span class="k">Yon</span><span class="v" id="hdg">--</span></div>
-    <div class="row"><span class="k">Gecerli</span><span class="v" id="gval">--</span></div>
-  </div>
-  <div class="card" style="padding:0;overflow:hidden;height:200px" id="map-card">
-    <div style="text-align:center;padding:80px 0;color:var(--dim);font-size:.85em">
-      GPS verisi gelince harita yuklenecek
-    </div>
-  </div>
-</div>
-
-<!-- SENSORLER -->
-<div id="p-sensors" class="page" style="display:none">
-  <div class="card">
-    <h2>&#128736; IMU</h2>
-    <div class="row"><span class="k">Pitch</span><span class="v" id="ipt">--</span></div>
-    <div class="row"><span class="k">Roll</span><span class="v" id="irl">--</span></div>
-    <div class="row"><span class="k">Titresim</span><span class="v" id="ivb">--</span></div>
-  </div>
-  <div class="card">
-    <h2>&#9881; DISK SENSORU</h2>
-    <div class="row"><span class="k">RPM</span><span class="v" id="drp">--</span></div>
-    <div class="row"><span class="k">Stabilite</span><span class="v" id="dst">--</span></div>
-    <div class="row"><span class="k">Bagli</span><span class="v" id="dco">--</span></div>
-  </div>
-  <div class="card">
-    <h2>&#127806; TOHUM SENSORU</h2>
-    <div class="row"><span class="k">Aralik CV</span><span class="v" id="scv">--</span></div>
-    <div class="row"><span class="k">Aktif</span><span class="v" id="sac">--</span></div>
-  </div>
-</div>
-
-<!-- SISTEM -->
-<div id="p-system" class="page" style="display:none">
-  <div class="card">
-    <h2>&#128187; SISTEM</h2>
-    <div class="row"><span class="k">Uptime</span><span class="v" id="upt">--</span></div>
-    <div class="row"><span class="k">CPU</span><span class="v" id="cpu">--</span></div>
-    <div class="row"><span class="k">WiFi RSSI</span><span class="v" id="rsi">--</span></div>
-    <div class="row"><span class="k">Hiz Kaynagi</span><span class="v" id="src">--</span></div>
-  </div>
-  <div class="card">
-    <h2>&#128202; SUNUCU</h2>
-    <div class="row"><span class="k">Toplam Kayit</span><span class="v" id="trc">--</span></div>
-    <div class="row"><span class="k">Sunucu Uptime</span><span class="v" id="sut">--</span></div>
-    <div class="row"><span class="k">Bellek</span><span class="v" id="smm">--</span></div>
-  </div>
-</div>
-
-<!-- GRAFIK -->
-<div id="p-chart" class="page" style="display:none">
-  <div class="card">
-    <h2>&#128200; HIZ (son 1 saat)</h2>
-    <div class="chart-wrap"><canvas id="c-spd"></canvas></div>
-  </div>
-  <div class="card">
-    <h2>&#128200; ARALIK (son 1 saat)</h2>
-    <div class="chart-wrap"><canvas id="c-spc"></canvas></div>
-  </div>
-  <div class="card">
-    <h2>&#128200; TEKLI ORAN (son 1 saat)</h2>
-    <div class="chart-wrap"><canvas id="c-sg"></canvas></div>
-  </div>
 </div>
 
 <script>
-/* ============================================================================
- *                           SEKME YONETIMI
- * ============================================================================ */
-const tabs = document.querySelectorAll('.tab');
-function showTab(id) {
-  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-  document.getElementById('p-' + id).style.display = 'block';
-  tabs.forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  if (id === 'chart') drawCharts();
-}
-
-/* ============================================================================
- *                           VERI GUNCELLEME
- * ============================================================================ */
-const SRC = ['---', 'ENK', 'RAD', 'GPS', 'FUZ'];
-let lastData = null;
-
-function el(id) { return document.getElementById(id); }
-function fmt(v, d) { return v != null ? v.toFixed(d) : '--'; }
-function yn(v) { return v ? '<span class="dot g"></span>Evet' : '<span class="dot r"></span>Hayir'; }
-function ago(ts) {
-  if (!ts) return '';
-  const d = new Date(ts + 'Z');
-  const s = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (s < 5) return 'simdi';
-  if (s < 60) return s + ' sn once';
-  if (s < 3600) return Math.floor(s/60) + ' dk once';
-  return Math.floor(s/3600) + ' sa once';
-}
-
-function update(d) {
-  if (!d || d.empty) {
-    el('conn').className = 'off';
-    el('conn').innerHTML = '&#9679; Veri bekleniyor...';
-    return;
+  /* Saat guncelle */
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('ts').textContent = now.toLocaleString('tr-TR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
   }
-  lastData = d;
+  updateTime();
+  setInterval(updateTime, 1000);
 
-  /* Baglanti durumu */
-  const fresh = d.ts && (Date.now() - new Date(d.ts + 'Z').getTime()) < 30000;
-  el('conn').className = fresh ? 'on' : 'off';
-  el('conn').innerHTML = (fresh ? '&#9679; Canli' : '&#9679; Eski veri');
-  el('ago').textContent = ago(d.ts);
-
-  /* Hero */
-  el('spd').textContent = fmt(d.speed_kmh, 1);
-  el('spc').textContent = fmt(d.spacing_cm, 1);
-
-  /* Ana */
-  el('lnk').innerHTML = d.link ? '<span class="dot g"></span>AKTIF' : '<span class="dot r"></span>KOPUK';
-  el('cnf').textContent = '%' + (d.confidence || 0);
-  el('mtr').innerHTML = d.motor_enabled
-    ? '<span class="dot g"></span>' + fmt(d.motor_hz, 1) + ' Hz'
-    : '<span class="dot y"></span>KAPALI';
-  el('alm').innerHTML = d.alarm_count > 0
-    ? '<span class="dot r"></span>' + d.alarm_count + ' alarm'
-    : '<span class="dot g"></span>Yok';
-  el('sd').textContent = d.seeds || 0;
-  el('ah').textContent = fmt(d.area_ha, 2) + ' ha';
-  el('dm').textContent = fmt(d.distance_m, 0) + ' m';
-
-  /* Ekim */
-  el('sd2').textContent = d.seeds || 0;
-  el('ah2').textContent = fmt(d.area_ha, 3);
-  el('dm2').textContent = fmt(d.distance_m, 1);
-  el('tgt').textContent = fmt(d.target_cm, 1) + ' cm';
-  var sg = (d.singulation || 0) / 100;
-  var ms = (d.miss || 0) / 100;
-  var db = (d.double_pct || 0) / 100;
-  el('sg').textContent = sg.toFixed(1) + '%';
-  el('ms').textContent = ms.toFixed(1) + '%';
-  el('db').textContent = db.toFixed(1) + '%';
-  el('bf-sg').style.width = Math.min(sg, 100) + '%';
-  el('bf-ms').style.width = Math.min(ms, 100) + '%';
-  el('bf-db').style.width = Math.min(db, 100) + '%';
-
-  /* GPS */
-  el('pos').textContent = d.gps_valid ? fmt(d.lat, 5) + ', ' + fmt(d.lon, 5) : '--';
-  el('sat').textContent = d.satellites || 0;
-  el('gspd').textContent = fmt(d.gps_speed, 1) + ' km/h';
-  el('hdg').textContent = fmt(d.heading, 0) + '\u00B0';
-  el('gval').innerHTML = yn(d.gps_valid);
-
-  /* Sensorler */
-  el('ipt').textContent = fmt(d.pitch, 1) + '\u00B0';
-  el('irl').textContent = fmt(d.roll_deg, 1) + '\u00B0';
-  el('ivb').innerHTML = d.vibration ? '<span class="dot r"></span>VAR' : '<span class="dot g"></span>Yok';
-  el('drp').textContent = fmt(d.disk_rpm, 1);
-  el('dst').textContent = fmt(d.disk_stability, 1) + '%';
-  el('dco').innerHTML = yn(d.disk_connected);
-  el('scv').textContent = fmt(d.seed_spacing_cv, 1) + '%';
-  el('sac').innerHTML = yn(d.seed_active);
-
-  /* Sistem */
-  var up = (d.uptime_ms || 0) / 1000;
-  var h = Math.floor(up / 3600), m = Math.floor((up % 3600) / 60);
-  el('upt').textContent = h + 's ' + m + 'd';
-  el('cpu').textContent = '%' + (d.cpu_load || 0);
-  el('rsi').textContent = (d.wifi_rssi || 0) + ' dBm';
-  el('src').textContent = SRC[d.speed_source || 0] || '?';
-}
-
-/* Periyodik veri cekme */
-function fetchLatest() {
-  fetch('/api/latest').then(r => r.json()).then(update).catch(() => {
-    el('conn').className = 'off';
-    el('conn').innerHTML = '&#9679; Sunucu hatasi';
-  });
-}
-
-/* Sunucu bilgisi */
-function fetchHealth() {
-  fetch('/api/health').then(r => r.json()).then(d => {
-    el('trc').textContent = d.records;
-    var u = d.uptime;
-    var h = Math.floor(u / 3600), m = Math.floor((u % 3600) / 60);
-    el('sut').textContent = h + 's ' + m + 'd';
-    el('smm').textContent = d.memory;
-  }).catch(() => {});
-}
-
-/* ============================================================================
- *                           MINI GRAFIK
- * ============================================================================ */
-function miniChart(canvasId, data, color, label) {
-  var c = document.getElementById(canvasId);
-  if (!c || !data.length) return;
-  var ctx = c.getContext('2d');
-  var W = c.width = c.parentElement.clientWidth;
-  var H = c.height = c.parentElement.clientHeight;
-
-  var vals = data.map(d => d[label] || 0);
-  var min = Math.min(...vals), max = Math.max(...vals);
-  if (max === min) { max += 1; min -= 1; }
-  var pad = (max - min) * 0.1;
-  min -= pad; max += pad;
-
-  ctx.clearRect(0, 0, W, H);
-
-  /* Izgaralar */
-  ctx.strokeStyle = '#1E2A3A';
-  ctx.lineWidth = 0.5;
-  for (var i = 0; i < 4; i++) {
-    var y = H * i / 3;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  /* Sunucu saglik kontrolu */
+  async function checkHealth() {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    try {
+      const r = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
+      if (r.ok) {
+        const d = await r.json();
+        dot.classList.remove('offline');
+        txt.textContent = 'Sunucu aktif — ' + d.telemetry_records + ' kayit';
+      } else {
+        throw new Error('HTTP ' + r.status);
+      }
+    } catch (e) {
+      dot.classList.add('offline');
+      txt.textContent = 'Sunucu baglantisi yok';
+    }
   }
-
-  /* Cizgi */
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  for (var i = 0; i < vals.length; i++) {
-    var x = (i / (vals.length - 1)) * W;
-    var y = H - ((vals[i] - min) / (max - min)) * H;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-
-  /* Min/Max etiket */
-  ctx.fillStyle = '#7A8BA0';
-  ctx.font = '10px system-ui';
-  ctx.textAlign = 'left';
-  ctx.fillText(max.toFixed(1), 4, 12);
-  ctx.fillText(min.toFixed(1), 4, H - 4);
-
-  /* Son deger */
-  ctx.fillStyle = color;
-  ctx.font = 'bold 12px system-ui';
-  ctx.textAlign = 'right';
-  ctx.fillText(vals[vals.length - 1].toFixed(1), W - 4, 14);
-}
-
-function drawCharts() {
-  fetch('/api/history?period=-1 hour&limit=200').then(r => r.json()).then(rows => {
-    if (!rows.length) return;
-    rows.reverse(); /* eskiden yeniye */
-    miniChart('c-spd', rows, '#00B4FF', 'speed_kmh');
-    miniChart('c-spc', rows, '#55EFC4', 'spacing_cm');
-    miniChart('c-sg', rows, '#00E676', 'singulation');
-  }).catch(() => {});
-}
-
-/* ============================================================================
- *                           BASLANGIC
- * ============================================================================ */
-fetchLatest();
-fetchHealth();
-setInterval(fetchLatest, 2000);
-setInterval(fetchHealth, 30000);
+  checkHealth();
+  setInterval(checkHealth, 15000);
 </script>
 </body>
 </html>

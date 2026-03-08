@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prime Mibzer - OTA Firmware Yonetimi</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:#0a0e17; color:#e0e0e0; min-height:100vh; }
+.header { background:#0d1220; padding:16px 24px; border-bottom:1px solid #1e2a3a; display:flex; justify-content:space-between; align-items:center; }
+.header h1 { font-size:20px; color:#00b4ff; }
+.header a { color:#7a8ba0; text-decoration:none; font-size:13px; }
+.header a:hover { color:#00b4ff; }
+.container { max-width:1200px; margin:0 auto; padding:20px; }
+
+/* Kartlar */
+.card { background:#141924; border:1px solid #1e2a3a; border-radius:10px; padding:20px; margin-bottom:20px; }
+.card h2 { font-size:16px; color:#00b4ff; margin-bottom:16px; border-bottom:1px solid #1e2a3a; padding-bottom:8px; }
+
+/* Form */
+.form-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group label { font-size:12px; color:#7a8ba0; }
+.form-group input, .form-group select, .form-group textarea { background:#0d1220; border:1px solid #1e2a3a; color:#e0e0e0; padding:8px 12px; border-radius:6px; font-size:14px; }
+.form-group select { min-width:140px; }
+.form-group input[type="file"] { padding:6px; }
+.form-group textarea { min-height:40px; resize:vertical; }
+
+/* Butonlar */
+.btn { padding:8px 18px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; transition:0.2s; }
+.btn-primary { background:#00b4ff; color:#000; }
+.btn-primary:hover { background:#33c4ff; }
+.btn-danger { background:#ff1744; color:#fff; }
+.btn-danger:hover { background:#ff4569; }
+.btn-success { background:#00e676; color:#000; }
+.btn-success:hover { background:#33eb91; }
+.btn-sm { padding:5px 12px; font-size:12px; }
+.btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* Tablo */
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; padding:10px 8px; color:#7a8ba0; border-bottom:1px solid #1e2a3a; font-weight:600; }
+td { padding:8px; border-bottom:1px solid #0d1220; }
+tr:hover { background:#0d1220; }
+
+/* Durum badge */
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.badge-pending { background:#ffb30033; color:#ffb300; }
+.badge-downloading { background:#00b4ff33; color:#00b4ff; }
+.badge-flashing { background:#aa00ff33; color:#bb86fc; }
+.badge-success { background:#00e67633; color:#00e676; }
+.badge-failed { background:#ff174433; color:#ff1744; }
+.badge-cancelled { background:#7a8ba033; color:#7a8ba0; }
+.badge-esp32 { background:#00b4ff22; color:#00b4ff; }
+.badge-stm32 { background:#ff980022; color:#ff9800; }
+
+/* Cihaz secim */
+.device-chips { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.device-chip { padding:6px 14px; border:1px solid #1e2a3a; border-radius:20px; font-size:12px; cursor:pointer; transition:0.2s; user-select:none; }
+.device-chip:hover { border-color:#00b4ff; }
+.device-chip.selected { background:#00b4ff22; border-color:#00b4ff; color:#00b4ff; }
+
+/* Progress bar */
+.progress-bar { width:100%; height:6px; background:#1e2a3a; border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:#00b4ff; border-radius:3px; transition:width 0.3s; }
+
+/* Toast */
+.toast { position:fixed; top:20px; right:20px; padding:12px 20px; border-radius:8px; font-size:13px; z-index:999; animation:slideIn 0.3s; }
+.toast-ok { background:#00e676; color:#000; }
+.toast-err { background:#ff1744; color:#fff; }
+@keyframes slideIn { from{transform:translateX(100px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* Upload progress */
+#uploadProgress { display:none; margin-top:8px; }
+
+@media(max-width:768px) {
+  .form-row { flex-direction:column; }
+  .container { padding:12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>OTA Firmware Yonetimi</h1>
+  <div>
+    <a href="/">Dashboard</a> &nbsp;|&nbsp;
+    <a href="/analytics.html">Analitik</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Firmware Yukle -->
+  <div class="card">
+    <h2>Firmware Yukle</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Hedef Platform</label>
+          <select id="fwTarget" required>
+            <option value="esp32">ESP32 (Ekran)</option>
+            <option value="stm32_m7">STM32 CM7 (Ana)</option>
+            <option value="stm32_m4">STM32 CM4 (Haberlesme)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Versiyon</label>
+          <input type="text" id="fwVersion" placeholder="orn: 1.2.0" required style="width:120px;">
+        </div>
+        <div class="form-group">
+          <label>.bin Dosyasi</label>
+          <input type="file" id="fwFile" accept=".bin,.hex" required>
+        </div>
+        <div class="form-group">
+          <label>Notlar</label>
+          <input type="text" id="fwNotes" placeholder="Degisiklik notu..." style="width:200px;">
+        </div>
+        <button type="submit" class="btn btn-primary">Yukle</button>
+      </div>
+    </form>
+    <div id="uploadProgress">
+      <div class="progress-bar"><div class="progress-fill" id="uploadFill" style="width:0%"></div></div>
+      <span id="uploadText" style="font-size:12px;color:#7a8ba0;"></span>
+    </div>
+  </div>
+
+  <!-- Firmware Listesi -->
+  <div class="card">
+    <h2>Yuklenen Firmware'ler</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Platform</th>
+          <th>Versiyon</th>
+          <th>Dosya</th>
+          <th>Boyut</th>
+          <th>MD5</th>
+          <th>Tarih</th>
+          <th>Atama</th>
+          <th>Islem</th>
+        </tr>
+      </thead>
+      <tbody id="fwList"></tbody>
+    </table>
+  </div>
+
+  <!-- Firmware Ata -->
+  <div class="card">
+    <h2>Cihazlara Firmware Ata</h2>
+    <div class="form-row" style="align-items:center;">
+      <div class="form-group">
+        <label>Firmware Sec</label>
+        <select id="assignFw"></select>
+      </div>
+      <button class="btn btn-success" onclick="assignFirmware()">Secili Cihazlara Ata</button>
+    </div>
+    <div id="deviceChips" class="device-chips"></div>
+  </div>
+
+  <!-- Guncelleme Durumlari -->
+  <div class="card">
+    <h2>Guncelleme Durumlari</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Cihaz</th>
+          <th>Firmware</th>
+          <th>Platform</th>
+          <th>Durum</th>
+          <th>Ilerleme</th>
+          <th>Hata</th>
+          <th>Tarih</th>
+        </tr>
+      </thead>
+      <tbody id="assignList"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const API = '';
+let devices = [];
+let firmwares = [];
+let selectedDevices = new Set();
+
+/* ---- Toast bildirim ---- */
+function toast(msg, ok) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+/* ---- Boyut formatlama ---- */
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(2) + ' MB';
+}
+
+/* ---- Platform badge ---- */
+function platformBadge(t) {
+  if (t === 'esp32') return '<span class="badge badge-esp32">ESP32</span>';
+  return '<span class="badge badge-stm32">' + t.toUpperCase() + '</span>';
+}
+
+/* ---- Durum badge ---- */
+function statusBadge(s) {
+  const labels = { pending:'Bekliyor', downloading:'Indiriliyor', flashing:'Yaziliyor', success:'Basarili', failed:'Basarisiz', cancelled:'Iptal' };
+  return `<span class="badge badge-${s}">${labels[s] || s}</span>`;
+}
+
+/* ---- Firmware listesini yukle ---- */
+async function loadFirmwares() {
+  try {
+    const res = await fetch(API + '/api/firmware/list');
+    firmwares = await res.json();
+    renderFirmwares();
+    renderAssignSelect();
+  } catch(e) { console.error(e); }
+}
+
+function renderFirmwares() {
+  const tb = document.getElementById('fwList');
+  if (!firmwares.length) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#7a8ba0;">Henuz firmware yuklenmemis</td></tr>'; return; }
+  tb.innerHTML = firmwares.map(f => `
+    <tr>
+      <td>${f.id}</td>
+      <td>${platformBadge(f.target)}</td>
+      <td><b>${f.version}</b></td>
+      <td>${f.filename}</td>
+      <td>${fmtSize(f.size)}</td>
+      <td style="font-family:monospace;font-size:11px;color:#7a8ba0;">${f.checksum ? f.checksum.substring(0,8) : '-'}</td>
+      <td>${new Date(f.ts+'Z').toLocaleString('tr-TR')}</td>
+      <td>${f.success_count}/${f.assign_count}</td>
+      <td>
+        <a href="/api/firmware/download/${f.id}" class="btn btn-sm btn-primary" style="text-decoration:none;">Indir</a>
+        <button class="btn btn-sm btn-danger" onclick="deleteFw(${f.id})">Sil</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderAssignSelect() {
+  const sel = document.getElementById('assignFw');
+  sel.innerHTML = firmwares.map(f => `<option value="${f.id}">${f.target.toUpperCase()} v${f.version} (#${f.id})</option>`).join('');
+}
+
+/* ---- Firmware sil ---- */
+async function deleteFw(id) {
+  if (!confirm('Bu firmware silinsin mi?')) return;
+  try {
+    const res = await fetch(API + `/api/firmware/${id}`, { method: 'DELETE' });
+    const j = await res.json();
+    if (j.ok) { toast('Firmware silindi', true); loadFirmwares(); loadAssignments(); }
+    else toast(j.error, false);
+  } catch(e) { toast('Silme hatasi', false); }
+}
+
+/* ---- Firmware yukle ---- */
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = new FormData();
+  form.append('target', document.getElementById('fwTarget').value);
+  form.append('version', document.getElementById('fwVersion').value);
+  form.append('notes', document.getElementById('fwNotes').value);
+  form.append('file', document.getElementById('fwFile').files[0]);
+
+  const progDiv = document.getElementById('uploadProgress');
+  const progFill = document.getElementById('uploadFill');
+  const progText = document.getElementById('uploadText');
+  progDiv.style.display = 'block';
+
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API + '/api/firmware/upload');
+
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        const pct = Math.round((ev.loaded / ev.total) * 100);
+        progFill.style.width = pct + '%';
+        progText.textContent = pct + '% yukleniyor...';
+      }
+    };
+
+    xhr.onload = () => {
+      const j = JSON.parse(xhr.responseText);
+      if (xhr.status === 200 && j.ok) {
+        toast('Firmware yuklendi! MD5: ' + j.checksum, true);
+        document.getElementById('uploadForm').reset();
+        loadFirmwares();
+      } else {
+        toast(j.error || 'Yukleme hatasi', false);
+      }
+      progDiv.style.display = 'none';
+      progFill.style.width = '0%';
+    };
+
+    xhr.onerror = () => { toast('Baglanti hatasi', false); progDiv.style.display = 'none'; };
+    xhr.send(form);
+  } catch(e) { toast('Yukleme hatasi: ' + e.message, false); progDiv.style.display = 'none'; }
+});
+
+/* ---- Cihaz listesi ---- */
+async function loadDevices() {
+  try {
+    const res = await fetch(API + '/api/devices');
+    devices = await res.json();
+    renderDeviceChips();
+  } catch(e) { console.error(e); }
+}
+
+function renderDeviceChips() {
+  const el = document.getElementById('deviceChips');
+  if (!devices.length) { el.innerHTML = '<span style="color:#7a8ba0;font-size:13px;">Henuz kayitli cihaz yok</span>'; return; }
+  el.innerHTML = devices.map(d => {
+    const sel = selectedDevices.has(d.device_id) ? ' selected' : '';
+    const ago = timeSince(d.last_seen);
+    return `<div class="device-chip${sel}" onclick="toggleDevice('${d.device_id}')">${d.device_id}<br><span style="font-size:10px;color:#7a8ba0;">v${d.fw_version || '?'} | ${ago}</span></div>`;
+  }).join('');
+}
+
+function toggleDevice(did) {
+  if (selectedDevices.has(did)) selectedDevices.delete(did);
+  else selectedDevices.add(did);
+  renderDeviceChips();
+}
+
+function timeSince(ts) {
+  const diff = (Date.now() - new Date(ts + 'Z').getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's';
+  if (diff < 3600) return Math.floor(diff / 60) + 'dk';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'sa';
+  return Math.floor(diff / 86400) + 'g';
+}
+
+/* ---- Firmware ata ---- */
+async function assignFirmware() {
+  const fwId = document.getElementById('assignFw').value;
+  if (!fwId) { toast('Firmware secin', false); return; }
+  if (!selectedDevices.size) { toast('En az bir cihaz secin', false); return; }
+
+  try {
+    const res = await fetch(API + '/api/firmware/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firmware_id: parseInt(fwId), device_ids: [...selectedDevices] })
+    });
+    const j = await res.json();
+    if (j.ok) {
+      toast(`${j.assigned} cihaza firmware atandi`, true);
+      selectedDevices.clear();
+      renderDeviceChips();
+      loadAssignments();
+    } else toast(j.error, false);
+  } catch(e) { toast('Atama hatasi', false); }
+}
+
+/* ---- Atama durumlarini yukle ---- */
+async function loadAssignments() {
+  try {
+    const res = await fetch(API + '/api/firmware/assignments');
+    const rows = await res.json();
+    renderAssignments(rows);
+  } catch(e) { console.error(e); }
+}
+
+function renderAssignments(rows) {
+  const tb = document.getElementById('assignList');
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7a8ba0;">Henuz atama yok</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => `
+    <tr>
+      <td><b>${r.device_id}</b></td>
+      <td>v${r.version}</td>
+      <td>${platformBadge(r.target)}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td>
+        <div class="progress-bar" style="width:80px;display:inline-block;vertical-align:middle;">
+          <div class="progress-fill" style="width:${r.progress}%;${r.status==='success'?'background:#00e676':r.status==='failed'?'background:#ff1744':''}"></div>
+        </div>
+        <span style="font-size:11px;margin-left:4px;">${r.progress}%</span>
+      </td>
+      <td style="color:#ff1744;font-size:12px;">${r.error_msg || '-'}</td>
+      <td style="font-size:12px;">${new Date(r.updated_at+'Z').toLocaleString('tr-TR')}</td>
+    </tr>
+  `).join('');
+}
+
+/* ---- Ilk yukleme + periyodik ---- */
+loadFirmwares();
+loadDevices();
+loadAssignments();
+setInterval(loadAssignments, 10000);
+setInterval(loadDevices, 30000);
+</script>
+
+</body>
+</html>
