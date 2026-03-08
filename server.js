@@ -27,7 +27,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
-const { authenticator } = require('otplib');
+const { TOTP, Secret } = require('otpauth');
 const QRCode = require('qrcode');
 
 /* ============================================================================
@@ -379,23 +379,35 @@ app.get('/auth/totp-setup', async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
   if (!user) return res.status(404).json({ error: 'Kullanici bulunamadi' });
 
-  /* Yeni secret uret */
-  const secret = authenticator.generateSecret();
-
-  /* Gecici olarak session'a kaydet (henuz DB'ye yazmiyoruz) */
-  req.session.pendingTotpSecret = secret;
-
-  const otpauth = authenticator.keyuri(user.username, 'PrimeMibzer', secret);
-
   try {
-    const qrDataUrl = await QRCode.toDataURL(otpauth);
+    /* Yeni secret uret */
+    const secret = new Secret();
+    const secretBase32 = secret.base32;
+
+    /* Gecici olarak session'a kaydet (henuz DB'ye yazmiyoruz) */
+    req.session.pendingTotpSecret = secretBase32;
+
+    /* TOTP URI olustur */
+    const totp = new TOTP({
+      issuer: 'PrimeMibzer',
+      label: user.username,
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: secret
+    });
+
+    const otpauthUri = totp.toString();
+    const qrDataUrl = await QRCode.toDataURL(otpauthUri);
+
     res.json({
       ok: true,
-      secret: secret,
+      secret: secretBase32,
       qr: qrDataUrl,
       username: user.username
     });
   } catch (err) {
+    console.error('[AUTH] QR kod olusturma hatasi:', err.message);
     res.status(500).json({ error: 'QR kod olusturulamadi' });
   }
 });
@@ -409,12 +421,17 @@ app.post('/auth/setup-totp', (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Dogrulama kodu zorunlu' });
 
-  const isValid = authenticator.verify({
-    token: code.toString().trim(),
-    secret: req.session.pendingTotpSecret
+  const totp = new TOTP({
+    issuer: 'PrimeMibzer',
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30,
+    secret: Secret.fromBase32(req.session.pendingTotpSecret)
   });
 
-  if (!isValid) {
+  const delta = totp.validate({ token: code.toString().trim(), window: 1 });
+
+  if (delta === null) {
     return res.status(401).json({ error: 'Gecersiz kod. Google Authenticator\'daki kodu girin.' });
   }
 
@@ -443,12 +460,17 @@ app.post('/auth/verify-totp', (req, res) => {
     return res.status(400).json({ error: 'TOTP kurulmamis' });
   }
 
-  const isValid = authenticator.verify({
-    token: code.toString().trim(),
-    secret: user.totp_secret
+  const totp = new TOTP({
+    issuer: 'PrimeMibzer',
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30,
+    secret: Secret.fromBase32(user.totp_secret)
   });
 
-  if (!isValid) {
+  const delta = totp.validate({ token: code.toString().trim(), window: 1 });
+
+  if (delta === null) {
     return res.status(401).json({ error: 'Gecersiz kod' });
   }
 
