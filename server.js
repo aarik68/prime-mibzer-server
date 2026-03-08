@@ -176,6 +176,26 @@ db.exec(`
   )
 `);
 
+/* Ayarlar tablosu */
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )
+`);
+
+/* Varsayilan ayarlar */
+const defaultSettings = {
+  site_name: 'PRIME MIBZER',
+  site_subtitle: 'Cihaz Yonetim Paneli'
+};
+for (const [k, v] of Object.entries(defaultSettings)) {
+  const exists = db.prepare('SELECT key FROM settings WHERE key = ?').get(k);
+  if (!exists) {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(k, v);
+  }
+}
+
 /* Indexler */
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_ts ON telemetry(ts);
@@ -725,6 +745,33 @@ app.post('/api/firmware/status', (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+/** GET /api/settings/public — Site adi gibi herkese acik ayarlar */
+app.get('/api/settings/public', (req, res) => {
+  const rows = db.prepare("SELECT key, value FROM settings WHERE key IN ('site_name', 'site_subtitle')").all();
+  const result = {};
+  for (const r of rows) result[r.key] = r.value;
+  res.json(result);
+});
+
+/** GET /api/settings — Tum ayarlar (admin) */
+app.get('/api/settings', requireAdmin, (req, res) => {
+  const rows = db.prepare('SELECT key, value FROM settings').all();
+  const result = {};
+  for (const r of rows) result[r.key] = r.value;
+  res.json(result);
+});
+
+/** PUT /api/settings — Ayar guncelle (admin) */
+app.put('/api/settings', requireAdmin, (req, res) => {
+  const { key, value } = req.body;
+  if (!key || value === undefined) {
+    return res.status(400).json({ error: 'key ve value zorunlu' });
+  }
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value.toString().trim());
+  console.log(`[ADMIN] Ayar guncellendi: ${key} = ${value}`);
+  res.json({ ok: true });
 });
 
 /** GET /api/health — Sunucu saglik kontrolu (acik — Cloud Panel icin) */

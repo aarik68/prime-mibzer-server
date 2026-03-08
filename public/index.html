@@ -411,9 +411,9 @@
           <path d="M2 12l10 5 10-5"/>
         </svg>
       </div>
-      <h1>Akilli <span>Mibzer</span></h1>
+      <h1 id="siteTitle">Akilli <span>Mibzer</span></h1>
     </div>
-    <div class="subtitle">CLOUD CONTROL PANEL &middot; v1.0</div>
+    <div class="subtitle" id="siteSubtitle">CLOUD CONTROL PANEL &middot; v1.0</div>
     <div class="ip-badge" onclick="navigator.clipboard.writeText('167.71.36.140')" title="Kopyala">
       <span class="dot"></span>
       167.71.36.140
@@ -575,6 +575,20 @@
   /* Auth kontrol — admin butonunu goster/gizle */
   fetch('/auth/me').then(r=>r.json()).then(d=>{
     if(d.role==='admin') document.getElementById('adminBtn').style.display='inline-flex';
+  }).catch(()=>{});
+
+  /* Site adini API'den yukle */
+  fetch('/api/settings/public').then(r=>r.json()).then(d=>{
+    if(d.site_name){
+      const parts=d.site_name.split(' ');
+      if(parts.length>=2){
+        document.getElementById('siteTitle').innerHTML=parts[0]+' <span>'+parts.slice(1).join(' ')+'</span>';
+      } else {
+        document.getElementById('siteTitle').innerHTML='<span>'+d.site_name+'</span>';
+      }
+      document.title=d.site_name+' — Cloud Panel';
+    }
+    if(d.site_subtitle) document.getElementById('siteSubtitle').textContent=d.site_subtitle;
   }).catch(()=>{});
 </script>
 </body>

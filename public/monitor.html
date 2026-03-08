@@ -90,7 +90,7 @@ border:1px solid var(--border);background:rgba(20,25,36,.92);backdrop-filter:blu
   <a href="/auth/logout" class="auth-btn logout-btn">Cikis</a>
 </div>
 
-<h1>&#9881; PRIME MIBZER</h1>
+<h1 id="siteTitle">&#9881; PRIME MIBZER</h1>
 <div class="status">
   <span id="conn" class="off">&#9679; Baglanti bekleniyor...</span>
 </div>
@@ -594,7 +594,15 @@ fetch('/auth/me').then(r=>r.json()).then(d=>{
 }).catch(()=>{});
 </script>
 <div style="text-align:center;padding:12px 0 8px;border-top:1px solid var(--border);margin-top:12px">
-  <a href="/analytics.html" style="color:var(--primary);font-size:.8em;text-decoration:none;font-weight:600">&#128225; Cihaz Yonetim Paneli &rarr;</a>
+  <a href="/analytics.html" style="color:var(--primary);font-size:.8em;text-decoration:none;font-weight:600" id="siteSubLink">&#128225; Cihaz Yonetim Paneli &rarr;</a>
 </div>
+<script>
+/* Site adini API'den yukle */
+fetch('/api/settings/public').then(r=>r.json()).then(d=>{
+  if(d.site_name) document.getElementById('siteTitle').innerHTML='&#9881; '+d.site_name;
+  if(d.site_subtitle) document.getElementById('siteSubLink').innerHTML='&#128225; '+d.site_subtitle+' &rarr;';
+  if(d.site_name) document.title=d.site_name;
+}).catch(()=>{});
+</script>
 </body>
 </html>

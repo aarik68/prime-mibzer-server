@@ -586,6 +586,37 @@
     </div>
   </div>
 
+  <!-- SITE AYARLARI -->
+  <div class="section-label">Site Ayarlari</div>
+  <div class="card">
+    <div class="card-header">
+      <h2>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        Site Ismi
+      </h2>
+    </div>
+
+    <div class="msg error" id="siteErr"></div>
+    <div class="msg success" id="siteOk"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Site Adi (baslik)</label>
+        <input type="text" id="siteName" placeholder="PRIME MIBZER">
+      </div>
+      <div class="form-group">
+        <label>Alt Baslik</label>
+        <input type="text" id="siteSubtitle" placeholder="Cihaz Yonetim Paneli">
+      </div>
+    </div>
+    <div style="margin-top: 8px">
+      <button class="btn btn-primary" onclick="saveSiteSettings()">Kaydet</button>
+    </div>
+  </div>
+
   <!-- SIFRE DEGISTIR (kendi) -->
   <div class="section-label">Hesap Ayarlari</div>
   <div class="card">
@@ -900,9 +931,58 @@
     });
   });
 
+  /* Site ayarlarini yukle */
+  async function loadSiteSettings() {
+    try {
+      const r = await fetch('/api/settings');
+      const d = await r.json();
+      if (d.site_name) $('siteName').value = d.site_name;
+      if (d.site_subtitle) $('siteSubtitle').value = d.site_subtitle;
+    } catch {}
+  }
+
+  /* Site ayarlarini kaydet */
+  async function saveSiteSettings() {
+    const errEl = $('siteErr');
+    const okEl = $('siteOk');
+    errEl.classList.remove('show');
+    okEl.classList.remove('show');
+
+    const name = $('siteName').value.trim();
+    const subtitle = $('siteSubtitle').value.trim();
+
+    if (!name) {
+      showMsg(errEl, 'Site adi bos olamaz');
+      return;
+    }
+
+    try {
+      /* Ismi kaydet */
+      let r = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'site_name', value: name })
+      });
+      if (!r.ok) { showMsg(errEl, 'Hata olustu'); return; }
+
+      /* Alt basligi kaydet */
+      r = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'site_subtitle', value: subtitle })
+      });
+      if (!r.ok) { showMsg(errEl, 'Hata olustu'); return; }
+
+      showMsg(okEl, 'Site ayarlari kaydedildi');
+    } catch (e) {
+      showMsg(errEl, 'Sunucu baglantisi hatasi');
+    }
+  }
+
   /* Sayfa yuklenince */
   checkAuth();
   loadUsers();
+  loadSiteSettings();
 </script>
 </body>
 </html>
